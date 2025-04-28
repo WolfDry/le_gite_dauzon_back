@@ -3,11 +3,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
+import { ReservationsModule } from './reservations/reservations.module';
 
 @Module({
   imports: [
     UsersModule,
-    ClientsModule
+    ClientsModule,
+    ReservationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

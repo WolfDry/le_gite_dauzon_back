@@ -20,9 +20,23 @@ model User {
 }
 
 model Client {
-  id        Int    @id @unique @default(autoincrement())
-  nom       String
-  prenom    String
-  email     String
-  telephone String
+  id           Int    @id @unique @default(autoincrement())
+  nom          String
+  prenom       String
+  email        String
+  telephone    String
+
+  reservations Reservation[]
+}
+
+model Reservation {
+  id         Int    @id @unique @default(autoincrement())
+  tarif      Int
+  debut      DateTime @db.Date
+  fin        DateTime @db.Date
+  dateAjout  DateTime @default(now())
+  nbPersonne Int
+
+  client     Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientId   Int?
 }
