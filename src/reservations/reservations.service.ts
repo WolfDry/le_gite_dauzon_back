@@ -15,7 +15,16 @@ export class ReservationsService {
   }
 
   findAll() {
-    return this.prisma.reservation.findMany();
+    return this.prisma.reservation.findMany({
+      include: {
+        client: true,
+        supplements: {
+          include: {
+            supplement: true
+          }
+        }
+      }
+    });
   }
 
   

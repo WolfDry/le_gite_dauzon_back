@@ -13,6 +13,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SupplementType {
+  SEJOUR
+  HEBDOMADAIRE
+  QUOTIDIEN
+}
+
 model User {
   id       Int    @id @unique @default(autoincrement())
   email    String @unique
@@ -30,13 +36,34 @@ model Client {
 }
 
 model Reservation {
-  id         Int    @id @unique @default(autoincrement())
-  tarif      Int
-  debut      DateTime @db.Date
-  fin        DateTime @db.Date
-  dateAjout  DateTime @default(now())
-  nbPersonne Int
+  id          Int    @id @unique @default(autoincrement())
+  tarif       Int
+  debut       DateTime @db.Date
+  fin         DateTime @db.Date
+  dateAjout   DateTime @default(now())
+  nbPersonne  Int
 
-  client     Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  clientId   Int?
+  client      Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientId    Int?
+
+  supplements SupplementOnReservation[]
+}
+
+model Supplement {
+  id           Int    @id @unique @default(autoincrement())
+  label        String @unique @default("")
+  tarif        Int
+  type         SupplementType
+
+  reservations SupplementOnReservation[]
+}
+
+model SupplementOnReservation {
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  reservationId Int
+  supplement    Supplement @relation(fields: [supplementId], references: [id])
+  supplementId  Int
+  nb            Int
+
+  @@id([reservationId, supplementId])
 }
