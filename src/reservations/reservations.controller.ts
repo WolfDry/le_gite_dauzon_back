@@ -13,7 +13,7 @@ export class ReservationsController {
 
   @Post()
   async create(@Body() createReservationDto: CreateReservationDto) {
-    const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone } = createReservationDto;
+    const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone, verif } = createReservationDto;
     if (!tarif) {
       throw new HttpException("Missing 'tarif' property for reservation creation", HttpStatus.BAD_REQUEST);
     }
@@ -51,6 +51,7 @@ export class ReservationsController {
       debut,
       fin,
       nbPersonne,
+      verif,
       client: {
         connectOrCreate: {
           where: {

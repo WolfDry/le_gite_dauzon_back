@@ -42,6 +42,7 @@ model Reservation {
   fin         DateTime @db.Date
   dateAjout   DateTime @default(now())
   nbPersonne  Int
+  verif       Boolean @default(false)
 
   client      Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
   clientId    Int?
