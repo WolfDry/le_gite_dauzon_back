@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Commentaire" ALTER COLUMN "verif" SET DEFAULT false,
+ALTER COLUMN "date" SET DEFAULT CURRENT_TIMESTAMP;

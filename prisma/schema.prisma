@@ -67,3 +67,13 @@ model SupplementOnReservation {
 
   @@id([reservationId, supplementId])
 }
+
+model Commentaire {
+  id           Int    @id @unique @default(autoincrement())
+  verif        Boolean @default(false)
+  created         DateTime @db.Date @default(now())
+  commentaire  String
+  nom          String?
+  prenom       String
+  note         Int  
+}
