@@ -4,10 +4,11 @@ import { CommentairesService } from './commentaires.service';
 import { CreateCommentaireDto } from './dto/create-commentaire.dto';
 import { UpdateCommentaireDto } from './dto/update-commentaire.dto';
 import { Prisma } from '@prisma/client';
+import { MailGunsService } from 'src/MailGun/mailGun.service';
 
 @Controller('commentaires')
 export class CommentairesController {
-  constructor(private readonly commentairesService: CommentairesService) {}
+  constructor(private readonly commentairesService: CommentairesService, private readonly  mailGunService: MailGunsService) {}
 
   @Post()
   async create(@Body() createCommentaireDto: CreateCommentaireDto) {
@@ -26,7 +27,8 @@ export class CommentairesController {
     }
     const payload: Prisma.CommentaireCreateInput = {commentaire, nom, prenom, note}
     
-    const result = await this.commentairesService.create(payload);
+    const result = await this.commentairesService.create(payload)
+    this.mailGunService.sendMail('commentaire')
     return result;
 
   }
