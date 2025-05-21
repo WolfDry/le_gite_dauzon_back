@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config'
 export class MailGunsService {
   private mg
   private domain
+  private emailReception 
 
   constructor(private configService: ConfigService) {
     const mailgun = new Mailgun(formData)
@@ -14,6 +15,10 @@ export class MailGunsService {
     const key = this.configService.get<string>('MAILGUN_KEY')
     if (!key) {
       throw new Error('MAILGUN_KEY is not defined in environment variables')
+    }
+    this.emailReception = this.configService.get<string>('MAILGUN_EMAIL_RECEPTION')
+    if (!this.emailReception) {
+      throw new Error('MAILGUN_EMAIL_RECEPTION is not defined in environment variables')
     }
 
     this.mg = mailgun.client({
@@ -54,7 +59,7 @@ export class MailGunsService {
 
     return this.mg.messages.create(this.domain, {
       from: 'Le gite d\'auzon <contact@legitedauzon.fr>',
-      to: ['benjamindeltour22@gmail.com'],
+      to: [this.emailReception],
       subject: data.subject,
       text: data.text,
       html: data.html,
