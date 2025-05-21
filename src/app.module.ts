@@ -7,6 +7,7 @@ import { ClientsModule } from './clients/clients.module'
 import { ReservationsModule } from './reservations/reservations.module'
 import { SupplementsModule } from './supplements/supplements.module'
 import { CommentairesModule } from './commentaires/commentaires.module'
+import { TarifsModule } from './tarifs/tarifs.module'
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CommentairesModule } from './commentaires/commentaires.module'
     ReservationsModule,
     SupplementsModule,
     CommentairesModule,
+    TarifsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

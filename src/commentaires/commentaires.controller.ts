@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus } from '@nestjs/common';
 
 import { CommentairesService } from './commentaires.service';
-import { CreateCommentaireDto } from './dto/create-commentaire.dto';
-import { UpdateCommentaireDto } from './dto/update-commentaire.dto';
+import { CreateCommentaireDto } from './dto/create-commentaires.dto';
+import { UpdateCommentaireDto } from './dto/update-commentaires.dto';
 import { Prisma } from '@prisma/client';
 import { MailGunsService } from 'src/MailGun/mailGun.service';
 

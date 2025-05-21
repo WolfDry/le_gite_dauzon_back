@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 
 import { Prisma } from '@prisma/client';
 import { CreateSupplementDto } from './dto/create-supplements.dto';

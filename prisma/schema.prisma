@@ -19,6 +19,13 @@ enum SupplementType {
   QUOTIDIEN
 }
 
+enum TarifFrequence {
+  SEMAINE
+  JOUR
+  WEEKEND
+  PERSONNE
+}
+
 model User {
   id       Int    @id @unique @default(autoincrement())
   email    String @unique
@@ -70,11 +77,22 @@ model SupplementOnReservation {
 }
 
 model Commentaire {
-  id           Int    @id @unique @default(autoincrement())
+  id           Int @id @unique @default(autoincrement())
   verif        Boolean @default(false)
-  created         DateTime @db.Date @default(now())
+  created      DateTime @db.Date @default(now())
   commentaire  String
   nom          String?
   prenom       String
   note         Int  
+}
+
+model Tarif {
+  id           Int @id @unique @default(autoincrement())
+  desc         String
+  label        String @unique
+  start_date   DateTime[] @db.Date
+  end_date     DateTime[] @db.Date
+  vacance      Boolean @default(false)
+  prix         Int
+  frequence    TarifFrequence[]
 }
