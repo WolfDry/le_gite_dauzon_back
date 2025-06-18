@@ -2,14 +2,18 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpS
 import { Prisma } from '@prisma/client'
 import { CreateReservationDto } from './dto/create-reservation.dto'
 import { ReservationsService } from './reservations.service'
-import { UpdateReservationDto } from './dto/udpate-reservation.dto'
+import { UpdateReservationDto } from './dto/update-reservation.dto'
 import { MailGunsService } from 'src/MailGun/mailGun.service'
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 
+@ApiTags('reservations')
 @Controller('reservations')
 export class ReservationsController {
-  constructor(private readonly reservationsService: ReservationsService, private readonly  mailGunService: MailGunsService) {}
+  constructor(private readonly reservationsService: ReservationsService, private readonly mailGunService: MailGunsService) { }
 
   @Post()
+  @ApiOperation({ summary: "Create a reservation" })
+  @ApiBody({ type: CreateReservationDto })
   async create(@Body() createReservationDto: CreateReservationDto) {
     const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone, verif } = createReservationDto
     if (!tarif) {
@@ -43,7 +47,7 @@ export class ReservationsController {
       prenom: prenom as string,
       email: email as string,
       telephone: telephone as string,
-    }    
+    }
     const payload: Prisma.ReservationCreateInput = {
       tarif,
       debut,
@@ -59,7 +63,7 @@ export class ReservationsController {
         }
       }
     }
-    
+
     const result = await this.reservationsService.create(payload)
     this.mailGunService.sendMail('reservation')
     return result
@@ -67,23 +71,28 @@ export class ReservationsController {
   }
 
   @Get()
+  @ApiOperation({ summary: "Get all reservations" })
   findAll() {
     return this.reservationsService.findAll()
   }
 
   @Get(':id')
+  @ApiOperation({ summary: "Get a reservation by id" })
   findOne(@Param('id') id: string) {
     return this.reservationsService.findOne(+id)
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: "Update a reservation" })
+  @ApiBody({ type: UpdateReservationDto })
   update(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
 
-    const payload: Prisma.ReservationUpdateInput = {...updateReservationDto}
+    const payload: Prisma.ReservationUpdateInput = { ...updateReservationDto }
     return this.reservationsService.update(+id, payload)
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: "Delete a reservation by id" })
   remove(@Param('id') id: string) {
     return this.reservationsService.remove(+id)
   }

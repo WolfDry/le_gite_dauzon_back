@@ -5,12 +5,16 @@ import { CreateCommentaireDto } from './dto/create-commentaires.dto';
 import { UpdateCommentaireDto } from './dto/update-commentaires.dto';
 import { Prisma } from '@prisma/client';
 import { MailGunsService } from 'src/MailGun/mailGun.service';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('commentaires')
 @Controller('commentaires')
 export class CommentairesController {
   constructor(private readonly commentairesService: CommentairesService, private readonly  mailGunService: MailGunsService) {}
 
   @Post()
+  @ApiOperation({summary: "Create a comment"})
+  @ApiBody({ type: CreateCommentaireDto })
   async create(@Body() createCommentaireDto: CreateCommentaireDto) {
     const { commentaire, nom, prenom, note } = createCommentaireDto;
     if (!commentaire) {
@@ -34,16 +38,19 @@ export class CommentairesController {
   }
 
   @Get()
+  @ApiOperation({summary: "Get all comments"})
   findAll() {
     return this.commentairesService.findAll();
   }
 
   @Get(':id')
+  @ApiOperation({summary: "Get a comment by id"})
   findOne(@Param('id') id: string) {
     return this.commentairesService.findOne(+id);
   }
 
   @Patch(':id')
+  @ApiOperation({summary: "Update a comment"})
   update(@Param('id') id: string, @Body() updateCommentaireDto: UpdateCommentaireDto) {
 
     const payload: Prisma.CommentaireUpdateInput = {...updateCommentaireDto}
@@ -51,6 +58,7 @@ export class CommentairesController {
   }
 
   @Delete(':id')
+  @ApiOperation({summary: "Delete a comment by id"})
   remove(@Param('id') id: string) {
     return this.commentairesService.remove(+id);
   }
