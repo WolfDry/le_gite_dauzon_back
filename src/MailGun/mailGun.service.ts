@@ -3,11 +3,17 @@ import * as formData from 'form-data'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+type Content = {
+  name: string
+  email: string
+  message: string
+}
+
 @Injectable()
 export class MailGunsService {
   private mg
   private domain
-  private emailReception 
+  private emailReception
 
   constructor(private configService: ConfigService) {
     const mailgun = new Mailgun(formData)
@@ -31,12 +37,27 @@ export class MailGunsService {
     }
   }
 
-  sendMail(subject: string) {
+  sendMail(subject: string, content?: Content) {
 
     let data = {
       subject: '',
       text: '',
       html: ''
+    }
+
+    console.log("subject : ", subject)
+    console.log("content : ", content)
+    if (content) {
+      return this.mg.messages.create(this.domain, {
+        from: 'Le gite d\'auzon <contact@legitedauzon.fr>',
+        to: [this.emailReception],
+        subject: 'Quelqu\'un essaye de vous contacter',
+        text: 'Quelqu\'un essaye de vous contacter',
+        html: `<p>${content.name} veut vous dire :</p>
+        <p>${content.message}</p>
+        <p>Email : ${content.email}</p>
+        `,
+      })
     }
 
     switch (subject) {
@@ -51,7 +72,7 @@ export class MailGunsService {
         data = {
           subject: 'Nouveau commentaire',
           text: 'Vous avez un nouveau commentaire sur le gite',
-          html: '<h1>Vous avez un nouveau commentaire sur le site !</h1>',          
+          html: '<h1>Vous avez un nouveau commentaire sur le site !</h1>',
         }
       default:
         break
