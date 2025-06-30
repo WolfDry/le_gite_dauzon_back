@@ -33,35 +33,35 @@ model User {
 }
 
 model Client {
-  id           Int    @id @unique @default(autoincrement())
-  nom          String
-  prenom       String
-  email        String
-  telephone    String
+  id        Int    @id @unique @default(autoincrement())
+  nom       String
+  prenom    String
+  email     String
+  telephone String
 
   reservations Reservation[]
 }
 
 model Reservation {
-  id          Int    @id @unique @default(autoincrement())
-  tarif       Int
-  debut       DateTime @db.Date
-  fin         DateTime @db.Date
-  dateAjout   DateTime @default(now())
-  nbPersonne  Int
-  verif       Boolean @default(false)
+  id         Int      @id @unique @default(autoincrement())
+  tarif      Int
+  debut      DateTime @db.Date
+  fin        DateTime @db.Date
+  dateAjout  DateTime @default(now())
+  nbPersonne Int
+  verif      Boolean  @default(false)
 
-  client      Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  clientId    Int?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientId Int?
 
   supplements SupplementOnReservation[]
 }
 
 model Supplement {
-  id           Int    @id @unique @default(autoincrement())
-  label        String @unique @default("")
-  tarif        Int
-  type         SupplementType
+  id    Int            @id @unique @default(autoincrement())
+  label String         @unique @default("")
+  tarif Int
+  type  SupplementType
 
   reservations SupplementOnReservation[]
 }
@@ -69,7 +69,7 @@ model Supplement {
 model SupplementOnReservation {
   reservation   Reservation @relation(fields: [reservationId], references: [id])
   reservationId Int
-  supplement    Supplement @relation(fields: [supplementId], references: [id])
+  supplement    Supplement  @relation(fields: [supplementId], references: [id])
   supplementId  Int
   nb            Int
 
@@ -77,22 +77,21 @@ model SupplementOnReservation {
 }
 
 model Commentaire {
-  id           Int @id @unique @default(autoincrement())
-  verif        Boolean @default(false)
-  created      DateTime @db.Date @default(now())
-  commentaire  String
-  nom          String?
-  prenom       String
-  note         Int  
+  id          Int      @id @unique @default(autoincrement())
+  verif       Boolean  @default(false)
+  created     DateTime @default(now()) @db.Date
+  commentaire String
+  name        String
+  note        Int
 }
 
 model Tarif {
-  id           Int @id @unique @default(autoincrement())
-  desc         String
-  label        String @unique
-  start_date   DateTime[] @db.Date
-  end_date     DateTime[] @db.Date
-  vacance      Boolean @default(false)
-  prix         Int
-  frequence    TarifFrequence[]
+  id         Int              @id @unique @default(autoincrement())
+  desc       String
+  label      String           @unique
+  start_date DateTime[]       @db.Date
+  end_date   DateTime[]       @db.Date
+  vacance    Boolean          @default(false)
+  prix       Int
+  frequence  TarifFrequence[]
 }

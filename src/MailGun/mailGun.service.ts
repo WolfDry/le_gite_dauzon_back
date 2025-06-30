@@ -45,8 +45,6 @@ export class MailGunsService {
       html: ''
     }
 
-    console.log("subject : ", subject)
-    console.log("content : ", content)
     if (content) {
       return this.mg.messages.create(this.domain, {
         from: 'Le gite d\'auzon <contact@legitedauzon.fr>',
