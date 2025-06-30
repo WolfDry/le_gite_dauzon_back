@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CommentairesService {
-  constructor (private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.CommentaireCreateInput) {
     try {
@@ -15,7 +15,11 @@ export class CommentairesService {
   }
 
   findAll() {
-    return this.prisma.commentaire.findMany();
+    return this.prisma.commentaire.findMany({
+      orderBy: {
+        created: 'desc',
+      }
+    });
   }
 
   findOne(id: number) {
@@ -26,7 +30,7 @@ export class CommentairesService {
 
   update(id: number, data: Prisma.CommentaireUpdateInput) {
     return this.prisma.commentaire.update({
-      where: {id},
+      where: { id },
       data,
     });
   }
