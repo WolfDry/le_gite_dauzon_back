@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config'
 type Content = {
   name: string
   email: string
+  phone?: string
   message: string
 }
 
@@ -45,25 +46,14 @@ export class MailGunsService {
       html: ''
     }
 
-    if (content) {
-      return this.mg.messages.create(this.domain, {
-        from: 'Le gite d\'auzon <contact@legitedauzon.fr>',
-        to: [this.emailReception],
-        subject: 'Quelqu\'un essaye de vous contacter',
-        text: 'Quelqu\'un essaye de vous contacter',
-        html: `<p>${content.name} veut vous dire :</p>
-        <p>${content.message}</p>
-        <p>Email : ${content.email}</p>
-        `,
-      })
-    }
-
     switch (subject) {
       case 'reservation':
         data = {
           subject: 'Nouvelle demande de reservation',
           text: 'Vous avez une nouvelle demande de reservation',
-          html: '<h1>Vous avez une nouvelle demande de reservation!</h1>',
+          html: `<h1>Vous avez une nouvelle demande de reservation</h1>
+          <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
+          <p>Téléphone : ${content ? content.phone ? content.phone : 'Pas de numéro de téléphone (pas normal)' : 'Pas de numéro de téléphone (pas normal)'}</p>`,
         }
         break
       case 'commentaire':
@@ -72,6 +62,16 @@ export class MailGunsService {
           text: 'Vous avez un nouveau commentaire sur le gite',
           html: '<h1>Vous avez un nouveau commentaire sur le site !</h1>',
         }
+      case 'autre':
+        data = {
+          subject: 'Quelqu\'un essaye de vous contacter',
+          text: 'Quelqu\'un essaye de vous contacter',
+          html: `<p>${content ? content.name : 'pas de nom (pas normal)'} veut vous dire :</p>
+        <p>${content ? content.message : 'pas de message (pas normal)'}</p>
+        <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
+        `,
+        }
+        break
       default:
         break
     }

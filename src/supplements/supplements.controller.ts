@@ -52,7 +52,7 @@ export class SupplementsController {
   @ApiBody({ type: UpdateSupplementDto })
   update(@Param('id') id: string, @Body() updateSupplementDto: UpdateSupplementDto) {
 
-    const payload: Prisma.ReservationUpdateInput = { ...updateSupplementDto }
+    const payload: Prisma.SupplementUpdateInput = { ...updateSupplementDto }
     return this.supplementsService.update(+id, payload);
   }
 

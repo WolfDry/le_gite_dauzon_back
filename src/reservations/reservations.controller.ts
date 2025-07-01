@@ -5,6 +5,7 @@ import { ReservationsService } from './reservations.service'
 import { UpdateReservationDto } from './dto/update-reservation.dto'
 import { MailGunsService } from 'src/MailGun/mailGun.service'
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { CreateRequestReservationDto } from './dto/create-request-reservation.dto'
 
 @ApiTags('reservations')
 @Controller('reservations')
@@ -65,7 +66,38 @@ export class ReservationsController {
     }
 
     const result = await this.reservationsService.create(payload)
-    this.mailGunService.sendMail('reservation')
+    return result
+  }
+
+  @Post('/request')
+  @ApiOperation({ summary: "Create a reservation request" })
+  @ApiBody({ type: CreateRequestReservationDto })
+  async createRequest(@Body() createRequestReservationDto: CreateRequestReservationDto) {
+    const { debut, fin, nbPersonne, verif, email, phone } = createRequestReservationDto
+    if (!debut) {
+      throw new HttpException("Missing 'debut' property for reservation creation", HttpStatus.BAD_REQUEST)
+    }
+    if (!fin) {
+      throw new HttpException("Missing 'fin' property for reservation creation", HttpStatus.BAD_REQUEST)
+    }
+    if (!nbPersonne) {
+      throw new HttpException("Missing 'nbPersonne' property for reservation creation", HttpStatus.BAD_REQUEST)
+    }
+    if (!email) {
+      throw new HttpException("Missing 'email' property for reservation request creation", HttpStatus.BAD_REQUEST)
+    }
+    if (!phone) {
+      throw new HttpException("Missing 'phone' property for reservation request creation", HttpStatus.BAD_REQUEST)
+    }
+    const payload: Prisma.ReservationCreateInput = {
+      debut,
+      fin,
+      nbPersonne,
+      verif
+    }
+
+    const result = await this.reservationsService.create(payload)
+    this.mailGunService.sendMail('reservation', { email, phone, name: "", message: "" })
     return result
 
   }

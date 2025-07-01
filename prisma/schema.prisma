@@ -44,12 +44,12 @@ model Client {
 
 model Reservation {
   id         Int      @id @unique @default(autoincrement())
-  tarif      Int
+  tarif      Int?
   debut      DateTime @db.Date
   fin        DateTime @db.Date
   dateAjout  DateTime @default(now())
-  nbPersonne Int
-  verif      Boolean  @default(false)
+  nbPersonne Json
+  verif      Boolean? @default(false)
 
   client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
   clientId Int?
