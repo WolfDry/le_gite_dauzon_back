@@ -62,6 +62,7 @@ export class MailGunsService {
           text: 'Vous avez un nouveau commentaire sur le gite',
           html: '<h1>Vous avez un nouveau commentaire sur le site !</h1>',
         }
+        break
       case 'autre':
         data = {
           subject: 'Quelqu\'un essaye de vous contacter',
