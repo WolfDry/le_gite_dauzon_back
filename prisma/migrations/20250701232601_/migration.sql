@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Evenement" ALTER COLUMN "location" DROP NOT NULL,
+ALTER COLUMN "lien" DROP NOT NULL;

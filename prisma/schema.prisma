@@ -26,6 +26,12 @@ enum TarifFrequence {
   PERSONNE
 }
 
+enum EventType {
+  RANDO
+  VISIT
+  EVENT
+}
+
 model User {
   id       Int    @id @unique @default(autoincrement())
   email    String @unique
@@ -94,4 +100,15 @@ model Tarif {
   vacance    Boolean          @default(false)
   prix       Int
   frequence  TarifFrequence[]
+}
+
+model Evenement {
+  id           Int       @id @unique @default(autoincrement())
+  titre        String
+  image        String
+  date         DateTime?
+  type         EventType
+  localisation String?
+  description  String
+  lien         String?
 }
