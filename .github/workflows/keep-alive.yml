@@ -1,0 +1,16 @@
+name: Keep Render Alive
+on:
+  schedule:
+    - cron: "0 * * * *" # Toutes les heures
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render API
+        run: |
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://le-gite-dauzon-back.onrender.com/cron)
+          if [ "$CODE" != "200" ]; then
+            echo "❌ Erreur: statut $CODE"
+            exit 1
+          fi
+          echo "✅ API réveillée avec succès"

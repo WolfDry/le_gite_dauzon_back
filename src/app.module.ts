@@ -10,6 +10,7 @@ import { EvenementsModule } from './evenements/evenements.module'
 import { SupplementsModule } from './supplements/supplements.module'
 import { CommentairesModule } from './commentaires/commentaires.module'
 import { ReservationsModule } from './reservations/reservations.module'
+import { CronModule } from './cron/cron.module'
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ReservationsModule } from './reservations/reservations.module'
     TarifsModule,
     MailGunModule,
     EvenementsModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [AppService],
