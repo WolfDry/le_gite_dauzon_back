@@ -66,6 +66,15 @@ export class ReservationsController {
     }
 
     const result = await this.reservationsService.create(payload)
+
+    if (createReservationDto.supplements?.length) {
+      await Promise.all(
+        createReservationDto.supplements.map(supplement =>
+          this.reservationsService.addSupplementToReservation(result.id, supplement)
+        )
+      )
+    }
+
     return result
   }
 
@@ -97,6 +106,7 @@ export class ReservationsController {
     }
 
     const result = await this.reservationsService.create(payload)
+
     this.mailGunService.sendMail('reservation', { email, phone, name: "", message: "" })
     return result
 
@@ -117,10 +127,24 @@ export class ReservationsController {
   @Patch(':id')
   @ApiOperation({ summary: "Update a reservation" })
   @ApiBody({ type: UpdateReservationDto })
-  update(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
+  async update(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
 
-    const payload: Prisma.ReservationUpdateInput = { ...updateReservationDto }
-    return this.reservationsService.update(+id, payload)
+    const { supplements, ...rest } = updateReservationDto
+    const payload: {} = { ...rest }
+    const updatedReservation = await this.reservationsService.update(+id, payload)
+
+    if (updateReservationDto.supplements) {
+      await this.reservationsService.clearSupplements(+id)
+
+      await Promise.all(
+        updateReservationDto.supplements.map(supplement =>
+          this.reservationsService.addSupplementToReservation(+id, supplement)
+        )
+      )
+    }
+
+    return updatedReservation
+
   }
 
   @Delete(':id')

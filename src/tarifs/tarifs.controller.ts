@@ -14,18 +14,15 @@ export class TarifsController {
   @ApiOperation({ summary: "Create a tarif" })
   @ApiBody({ type: CreateTarifsDto })
   async create(@Body() createTarifsDto: CreateTarifsDto) {
-    const { desc, label, start_date, end_date, vacance, prix, frequence } = createTarifsDto;
+    const { desc, label, date, vacance, prix, frequence } = createTarifsDto;
     if (!desc) {
       throw new HttpException("Missing 'desc' property for tarif creation", HttpStatus.BAD_REQUEST);
     }
     if (!label) {
       throw new HttpException("Missing 'label' property for tarif creation", HttpStatus.BAD_REQUEST);
     }
-    if (!start_date) {
+    if (!date) {
       throw new HttpException("Missing 'startDate' property for tarif creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!end_date) {
-      throw new HttpException("Missing 'endDate' property for tarif creation", HttpStatus.BAD_REQUEST);
     }
     if (!prix) {
       throw new HttpException("Missing 'prix' property for tarif creation", HttpStatus.BAD_REQUEST);
@@ -33,7 +30,7 @@ export class TarifsController {
     if (!frequence) {
       throw new HttpException("Missing 'frequence' property for tarif creation", HttpStatus.BAD_REQUEST);
     }
-    const payload: Prisma.TarifCreateInput = { desc, label, start_date, end_date, vacance, prix, frequence }
+    const payload: Prisma.TarifCreateInput = { desc, label, date, vacance, prix, frequence }
 
     const result = await this.tarifsService.create(payload)
     return result;

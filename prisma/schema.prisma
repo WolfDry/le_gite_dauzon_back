@@ -73,7 +73,7 @@ model Supplement {
 }
 
 model SupplementOnReservation {
-  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   reservationId Int
   supplement    Supplement  @relation(fields: [supplementId], references: [id])
   supplementId  Int
@@ -92,14 +92,13 @@ model Commentaire {
 }
 
 model Tarif {
-  id         Int              @id @unique @default(autoincrement())
-  desc       String
-  label      String           @unique
-  start_date DateTime[]       @db.Date
-  end_date   DateTime[]       @db.Date
-  vacance    Boolean          @default(false)
-  prix       Int
-  frequence  TarifFrequence[]
+  id        Int              @id @unique @default(autoincrement())
+  desc      String
+  label     String           @unique
+  date      String[]
+  vacance   Boolean          @default(false)
+  prix      Float
+  frequence TarifFrequence[]
 }
 
 model Evenement {

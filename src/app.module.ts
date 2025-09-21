@@ -11,11 +11,13 @@ import { SupplementsModule } from './supplements/supplements.module'
 import { CommentairesModule } from './commentaires/commentaires.module'
 import { ReservationsModule } from './reservations/reservations.module'
 import { CronModule } from './cron/cron.module'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     UsersModule,
+    AuthModule,
     ClientsModule,
     ReservationsModule,
     SupplementsModule,

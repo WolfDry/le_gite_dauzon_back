@@ -9,11 +9,8 @@ export class UpdateTarifsDto {
   @ApiProperty({ description: 'Label of a tarif' })
   readonly label?: string
 
-  @ApiProperty({ description: 'Start date of a tarif' })
-  readonly start_date?: Date[]
-
-  @ApiProperty({ description: 'End date of a tarif' })
-  readonly end_date?: Date[]
+  @ApiProperty({ description: 'Date of a tarif' })
+  readonly date?: string[]
 
   @ApiProperty({ description: 'Tarif is during vacance' })
   readonly vacance?: boolean

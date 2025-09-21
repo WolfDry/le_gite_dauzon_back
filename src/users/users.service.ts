@@ -5,7 +5,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UsersService {
-  constructor (private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.UserCreateInput) {
     try {
@@ -29,10 +29,15 @@ export class UsersService {
       where: { id },
     });
   }
+  findByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+    });
+  }
 
   update(id: number, data: Prisma.UserUpdateInput) {
     return this.prisma.user.update({
-      where: {id},
+      where: { id },
       data,
     });
   }

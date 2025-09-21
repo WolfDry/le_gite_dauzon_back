@@ -34,4 +34,14 @@ export class CreateReservationDto {
 
   @ApiProperty({ description: 'Is the reservation verifed' })
   readonly verif: boolean
+
+  @ApiProperty({
+    description: 'Supplements to attach to the reservation',
+    type: [Object],
+    required: false
+  })
+  readonly supplements?: {
+    supplementId: number
+    nb: number
+  }[]
 }
