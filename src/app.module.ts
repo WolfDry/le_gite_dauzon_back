@@ -12,6 +12,7 @@ import { CommentairesModule } from './commentaires/commentaires.module'
 import { ReservationsModule } from './reservations/reservations.module'
 import { CronModule } from './cron/cron.module'
 import { AuthModule } from './auth/auth.module'
+import { UploadModule } from './Upload/Upload.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AuthModule } from './auth/auth.module'
     MailGunModule,
     EvenementsModule,
     CronModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
