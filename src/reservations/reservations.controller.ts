@@ -58,7 +58,7 @@ export class ReservationsController {
       client: {
         connectOrCreate: {
           where: {
-            id: clientId ?? ''
+            id: clientId ?? -1
           },
           create: validatedClient
         }

@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 
 @Controller('clients')
 export class ClientsController {
-  constructor(private readonly clientsService: ClientsService) {}
+  constructor(private readonly clientsService: ClientsService) { }
 
   @Post()
   async create(@Body() createClientDto: CreateClientDto) {
@@ -24,8 +24,8 @@ export class ClientsController {
     if (!telephone) {
       throw new HttpException("Missing 'telephone' property for client creation", HttpStatus.BAD_REQUEST);
     }
-    const payload: Prisma.ClientCreateInput = {email, nom, prenom, telephone}
-    
+    const payload: Prisma.ClientCreateInput = { email, nom, prenom, telephone }
+
     const result = await this.clientsService.create(payload);
     return result;
 
@@ -44,7 +44,7 @@ export class ClientsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateClientDto: UpdateClientDto) {
 
-    const payload: Prisma.ClientUpdateInput = {...updateClientDto}
+    const payload: Prisma.ClientUpdateInput = { ...updateClientDto }
     return this.clientsService.update(+id, payload);
   }
 

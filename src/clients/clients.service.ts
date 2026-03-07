@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ClientsService {
-  constructor (private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.ClientCreateInput) {
     try {
@@ -26,7 +26,7 @@ export class ClientsService {
 
   update(id: number, data: Prisma.ClientUpdateInput) {
     return this.prisma.client.update({
-      where: {id},
+      where: { id },
       data,
     });
   }
