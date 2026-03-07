@@ -1,7 +1,8 @@
 name: Keep Render Alive
 on:
   schedule:
-    - cron: "0 * * * *" # Toutes les heures
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 jobs:
   ping:
     runs-on: ubuntu-latest
