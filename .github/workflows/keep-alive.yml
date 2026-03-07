@@ -8,7 +8,7 @@ jobs:
     steps:
       - name: Ping Render API
         run: |
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://le-gite-dauzon-back.onrender.com/cron)
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" https://le-gite-dauzon-back-xs73.onrender.com/cron)
           if [ "$CODE" != "200" ]; then
             echo "❌ Erreur: statut $CODE"
             exit 1
