@@ -13,4 +13,7 @@ export class UpdateCommentaireDto {
 
   @ApiProperty({ description: 'Rating related to comment' })
   readonly note?: number;
+
+  @ApiProperty({ description: 'Timestamp of when the comment was created' })
+  readonly created?: Date;
 }

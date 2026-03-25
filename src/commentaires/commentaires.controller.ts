@@ -16,7 +16,7 @@ export class CommentairesController {
   @ApiOperation({ summary: "Create a comment" })
   @ApiBody({ type: CreateCommentaireDto })
   async create(@Body() createCommentaireDto: CreateCommentaireDto) {
-    const { commentaire, name, note } = createCommentaireDto;
+    const { commentaire, name, note, verif, created } = createCommentaireDto;
     if (!commentaire) {
       throw new HttpException("Missing 'commentaire' property for commentaire creation", HttpStatus.BAD_REQUEST);
     }
@@ -27,6 +27,14 @@ export class CommentairesController {
       throw new HttpException("Missing 'note' property for commentaire creation", HttpStatus.BAD_REQUEST);
     }
     const payload: Prisma.CommentaireCreateInput = { commentaire, name, note }
+
+    if (verif) {
+      payload.verif = verif;
+    }
+
+    if (created) {
+      payload.created = created;
+    }
 
     const result = await this.commentairesService.create(payload)
     this.mailGunService.sendMail('commentaire')
