@@ -61,7 +61,7 @@ export class MailGunsService {
           <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
           <p>Téléphone : ${content ? content.phone ? content.phone : 'Pas de numéro de téléphone (pas normal)' : 'Pas de numéro de téléphone (pas normal)'}</p>
           <p>Nombre de personnes : ${content ? content.nbPersonne ? content.nbPersonne.map((np) => np.label + " : " + np.nb).join(", ") : 'Pas de nombre de personnes (pas normal)' : 'Pas de nombre de personnes (pas normal)'}</p>
-          <p>Date : ${content ? content.debut || content.fin ? new Date(content.debut!).toLocaleDateString() + " et " + new Date(content.fin!).toLocaleDateString() : 'Pas de date (pas normal)' : 'Pas de date (pas normal)'}</p>`
+          <p>Date : ${content ? content.debut || content.fin ? "Du " + new Date(content.debut!).toLocaleDateString() + " au " + new Date(content.fin!).toLocaleDateString() : 'Pas de date (pas normal)' : 'Pas de date (pas normal)'}</p>`
         }
         break
       case 'commentaire':
