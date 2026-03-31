@@ -107,7 +107,7 @@ export class ReservationsController {
 
     const result = await this.reservationsService.create(payload)
 
-    this.mailGunService.sendMail('reservation', { email, phone, name: "", message: "" })
+    this.mailGunService.sendMail('reservation', { email, phone, debut, fin, nbPersonne })
     return result
 
   }

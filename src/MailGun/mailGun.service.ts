@@ -4,10 +4,16 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 type Content = {
-  name: string
+  name?: string
   email: string
   phone?: string
-  message: string
+  message?: string
+  debut?: Date | null
+  fin?: Date | null
+  nbPersonne?: {
+    label: string
+    nb: number
+  }[]
 }
 
 @Injectable()
@@ -53,7 +59,9 @@ export class MailGunsService {
           text: 'Vous avez une nouvelle demande de reservation',
           html: `<h1>Vous avez une nouvelle demande de reservation</h1>
           <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
-          <p>Téléphone : ${content ? content.phone ? content.phone : 'Pas de numéro de téléphone (pas normal)' : 'Pas de numéro de téléphone (pas normal)'}</p>`,
+          <p>Téléphone : ${content ? content.phone ? content.phone : 'Pas de numéro de téléphone (pas normal)' : 'Pas de numéro de téléphone (pas normal)'}</p>
+          <p>Nombre de personnes : ${content ? content.nbPersonne ? content.nbPersonne.map((np) => np.label + " : " + np.nb).join(", ") : 'Pas de nombre de personnes (pas normal)' : 'Pas de nombre de personnes (pas normal)'}</p>
+          <p>Date : ${content ? content.debut || content.fin ? new Date(content.debut!).toLocaleDateString() + " et " + new Date(content.fin!).toLocaleDateString() : 'Pas de date (pas normal)' : 'Pas de date (pas normal)'}</p>`
         }
         break
       case 'commentaire':
@@ -67,9 +75,9 @@ export class MailGunsService {
         data = {
           subject: 'Quelqu\'un essaye de vous contacter',
           text: 'Quelqu\'un essaye de vous contacter',
-          html: `<p>${content ? content.name : 'pas de nom (pas normal)'} veut vous dire :</p>
-        <p>${content ? content.message : 'pas de message (pas normal)'}</p>
-        <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
+          html: `<p>${content ? content.name ? content.name : 'pas de nom (pas normal)' : 'pas de nom (pas normal)'}</p>
+          <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
+        <p>${content ? content.message ? content.message : 'pas de message (pas normal)' : 'pas de message (pas normal)'}</p>
         `,
         }
         break
