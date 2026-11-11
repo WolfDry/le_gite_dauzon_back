@@ -4,8 +4,10 @@ import { TarifsService } from './tarifs.service';
 import { CreateTarifsDto } from './dto/create-tarifs.dto';
 import { UpdateTarifsDto } from './dto/update-tarifs.dto';
 import { Prisma } from '@prisma/client';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/auth/public.decorator';
 @ApiTags('tarifs')
+@ApiBearerAuth()
 @Controller('tarifs')
 export class TarifsController {
   constructor(private readonly tarifsService: TarifsService) { }
@@ -37,6 +39,7 @@ export class TarifsController {
 
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: "Get all tarifs" })
   findAll() {

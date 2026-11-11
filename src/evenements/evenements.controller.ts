@@ -2,11 +2,13 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpS
 
 import { EvenementService } from './evenements.service'
 import { Prisma } from '@prisma/client'
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateEvenementDto } from './dto/create-evenements.dto';
 import { UpdateEvenementDto } from './dto/update-evenements.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('evenements')
+@ApiBearerAuth()
 @Controller('evenements')
 export class EvenementController {
   constructor(private readonly evenementsService: EvenementService) { }
@@ -35,6 +37,7 @@ export class EvenementController {
 
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: "Get all events" })
   findAll() {

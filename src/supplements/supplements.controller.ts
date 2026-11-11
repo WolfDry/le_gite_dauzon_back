@@ -4,8 +4,9 @@ import { Prisma } from '@prisma/client';
 import { CreateSupplementDto } from './dto/create-supplements.dto';
 import { UpdateSupplementDto } from './dto/update-supplements.dto';
 import { SupplementsService } from './supplements.service';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 @ApiTags('supplements')
+@ApiBearerAuth()
 @Controller('supplements')
 export class SupplementsController {
   constructor(private readonly supplementsService: SupplementsService) { }

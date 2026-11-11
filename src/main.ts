@@ -17,6 +17,7 @@ async function bootstrap() {
     .setTitle('Api du gite d\'Auzon')
     .setDescription('Api du gite d\'Auzon')
     .setVersion('1.0')
+    .addBearerAuth()
     .build()
 
   const document = SwaggerModule.createDocument(app, config)

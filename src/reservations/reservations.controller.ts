@@ -4,10 +4,12 @@ import { CreateReservationDto } from './dto/create-reservation.dto'
 import { ReservationsService } from './reservations.service'
 import { UpdateReservationDto } from './dto/update-reservation.dto'
 import { MailGunsService } from 'src/MailGun/mailGun.service'
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto'
+import { Public } from 'src/auth/public.decorator'
 
 @ApiTags('reservations')
+@ApiBearerAuth()
 @Controller('reservations')
 export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService, private readonly mailGunService: MailGunsService) { }
@@ -78,6 +80,7 @@ export class ReservationsController {
     return result
   }
 
+  @Public()
   @Post('/request')
   @ApiOperation({ summary: "Create a reservation request" })
   @ApiBody({ type: CreateRequestReservationDto })
@@ -112,6 +115,7 @@ export class ReservationsController {
 
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: "Get all reservations" })
   findAll() {

@@ -1,5 +1,5 @@
 // src/users/users.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, UnauthorizedException, UseGuards } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { ApiBody, ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../auth/auth.service';
 import { AuthGuard } from '@nestjs/passport';
+import { AuthUser, CurrentUser, Public } from '../auth/public.decorator';
 
 class LoginDto { email!: string; password!: string; }
 
@@ -19,10 +20,15 @@ export class UsersController {
     private readonly authService: AuthService,
   ) { }
 
+  @Public()
   @Post()
-  @ApiOperation({ summary: "Create a user" })
+  @ApiOperation({ summary: "Create a user (JWT required, except for the very first user)" })
   @ApiBody({ type: CreateUserDto })
-  async create(@Body() createUserDto: CreateUserDto) {
+  @ApiBearerAuth()
+  async create(@Body() createUserDto: CreateUserDto, @CurrentUser() currentUser: AuthUser | null) {
+    if (!currentUser && (await this.usersService.count()) > 0) {
+      throw new UnauthorizedException();
+    }
     const { email, password } = createUserDto;
     if (!email) throw new HttpException("Missing 'email'", HttpStatus.BAD_REQUEST);
     if (!password) throw new HttpException("Missing 'password'", HttpStatus.BAD_REQUEST);
@@ -31,6 +37,7 @@ export class UsersController {
     return this.usersService.create(payload);
   }
 
+  @Public()
   @Post('login')
   @ApiOperation({ summary: "Login & get JWT" })
   @ApiBody({ type: LoginDto })

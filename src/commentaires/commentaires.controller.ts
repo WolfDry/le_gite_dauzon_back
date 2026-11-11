@@ -5,17 +5,20 @@ import { CreateCommentaireDto } from './dto/create-commentaires.dto';
 import { UpdateCommentaireDto } from './dto/update-commentaires.dto';
 import { Prisma } from '@prisma/client';
 import { MailGunsService } from 'src/MailGun/mailGun.service';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthUser, CurrentUser, Public } from 'src/auth/public.decorator';
 
 @ApiTags('commentaires')
+@ApiBearerAuth()
 @Controller('commentaires')
 export class CommentairesController {
   constructor(private readonly commentairesService: CommentairesService, private readonly mailGunService: MailGunsService) { }
 
+  @Public()
   @Post()
   @ApiOperation({ summary: "Create a comment" })
   @ApiBody({ type: CreateCommentaireDto })
-  async create(@Body() createCommentaireDto: CreateCommentaireDto) {
+  async create(@Body() createCommentaireDto: CreateCommentaireDto, @CurrentUser() currentUser: AuthUser | null) {
     const { commentaire, name, note, verif, created } = createCommentaireDto;
     if (!commentaire) {
       throw new HttpException("Missing 'commentaire' property for commentaire creation", HttpStatus.BAD_REQUEST);
@@ -28,12 +31,14 @@ export class CommentairesController {
     }
     const payload: Prisma.CommentaireCreateInput = { commentaire, name, note }
 
-    if (verif) {
-      payload.verif = verif;
-    }
+    if (currentUser) {
+      if (verif) {
+        payload.verif = verif;
+      }
 
-    if (created) {
-      payload.created = created;
+      if (created) {
+        payload.created = created;
+      }
     }
 
     const result = await this.commentairesService.create(payload)
@@ -42,6 +47,7 @@ export class CommentairesController {
 
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: "Get all comments" })
   findAll() {

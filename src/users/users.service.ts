@@ -20,6 +20,10 @@ export class UsersService {
     }
   }
 
+  count() {
+    return this.prisma.user.count();
+  }
+
   findAll() {
     return this.prisma.user.findMany();
   }

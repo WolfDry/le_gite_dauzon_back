@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { APP_GUARD } from '@nestjs/core'
 import { AppService } from './app.service'
 import { ConfigModule } from '@nestjs/config'
 import { AppController } from './app.controller'
@@ -13,6 +14,7 @@ import { ReservationsModule } from './reservations/reservations.module'
 import { CronModule } from './cron/cron.module'
 import { AuthModule } from './auth/auth.module'
 import { UploadModule } from './Upload/Upload.module'
+import { JwtAuthGuard } from './auth/jwt-auth.guard'
 
 @Module({
   imports: [
@@ -30,6 +32,9 @@ import { UploadModule } from './Upload/Upload.module'
     UploadModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+  ],
 })
 export class AppModule { }
