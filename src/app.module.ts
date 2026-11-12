@@ -15,10 +15,12 @@ import { CronModule } from './cron/cron.module'
 import { AuthModule } from './auth/auth.module'
 import { UploadModule } from './Upload/Upload.module'
 import { JwtAuthGuard } from './auth/jwt-auth.guard'
+import { PrismaModule } from './prisma/prisma.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
     UsersModule,
     AuthModule,
     ClientsModule,

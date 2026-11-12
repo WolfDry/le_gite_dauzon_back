@@ -1,32 +1,22 @@
 import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
+import { UploadService } from './Upload.service';
 
 @ApiTags('upload')
 @ApiBearerAuth()
 @Controller('upload')
 export class UploadController {
+  constructor(private readonly uploadService: UploadService) { }
 
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueName =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-
-          cb(null, uniqueName + extname(file.originalname));
-        },
-      }),
+      storage: memoryStorage(),
     }),
   )
   uploadFile(@UploadedFile() file: Express.Multer.File) {
-    return {
-      filename: file.filename,
-      path: file.path,
-    };
+    return this.uploadService.save(file);
   }
 }

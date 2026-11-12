@@ -21,6 +21,22 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
+## Déploiement sur Vercel
+
+1. Importer ce dépôt dans Vercel (Root Directory : la racine du back). La configuration est dans `vercel.json` :
+   `npm run build` (migrations Prisma + `prisma generate` + `nest build`), puis toutes les routes sont servies par la fonction `api/index.js`.
+2. Définir les variables d'environnement :
+
+| Variable | Rôle |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL (de préférence l'URL *poolée* : Neon, Supabase pooler…) |
+| `JWT_SECRET`, `JWT_EXPIRES` | Jetons d'authentification |
+| `SECRET_SALT` | Préfixe des mots de passe hachés |
+| `MAILGUN_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_EMAIL_RECEPTION` | Envoi des e-mails |
+
+L'envoi d'images (`POST /upload`) ne fonctionne qu'en local : les fichiers sont écrits dans `./uploads` et servis sous `/uploads/<nom>`.
+Sur Vercel (disque en lecture seule), la route répond 503.
+
 ## Description
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
