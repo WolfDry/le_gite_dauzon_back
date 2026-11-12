@@ -135,7 +135,7 @@ describe("Contrôle d'accès de l'API", () => {
       ['get', '/evenements/1'],
       ['patch', '/evenements/1'],
       ['delete', '/evenements/1'],
-      ['post', '/upload'],
+      ['post', '/upload/signature'],
       ['get', '/users'],
       ['get', '/users/1'],
       ['patch', '/users/1'],

@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
-import { join } from 'path'
 import { AppModule } from './app.module'
 
 /**
@@ -12,11 +11,6 @@ export async function createApp(): Promise<NestExpressApplication> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
   app.enableCors()
-
-  // Fichiers envoyés en local : voir UploadService.
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  })
 
   const config = new DocumentBuilder()
     .setTitle('Api du gite d\'Auzon')

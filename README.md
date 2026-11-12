@@ -33,9 +33,14 @@
 | `JWT_SECRET`, `JWT_EXPIRES` | Jetons d'authentification |
 | `SECRET_SALT` | Préfixe des mots de passe hachés |
 | `MAILGUN_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_EMAIL_RECEPTION` | Envoi des e-mails |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Stockage des images d'événements |
 
-L'envoi d'images (`POST /upload`) ne fonctionne qu'en local : les fichiers sont écrits dans `./uploads` et servis sous `/uploads/<nom>`.
-Sur Vercel (disque en lecture seule), la route répond 503.
+Les images d'événements sont stockées sur Cloudinary, dans le dossier `evenements`.
+L'admin demande une signature à `POST /upload/signature`, puis envoie le fichier directement à Cloudinary
+(sans passer par la fonction Vercel, limitée à ~4,5 Mo par requête). Le champ `Evenement.image` contient le
+`public_id` Cloudinary (ex. `evenements/abc123`) ; le site et l'admin construisent l'URL optimisée à l'affichage.
+L'ancienne image est supprimée de Cloudinary quand un événement est supprimé ou que son image est remplacée.
+Sans les variables `CLOUDINARY_*`, la route de signature répond 503.
 
 ## Description
 

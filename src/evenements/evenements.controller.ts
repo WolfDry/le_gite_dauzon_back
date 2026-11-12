@@ -6,6 +6,13 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateEvenementDto } from './dto/create-evenements.dto';
 import { UpdateEvenementDto } from './dto/update-evenements.dto';
 import { Public } from 'src/auth/public.decorator';
+import { EVENEMENTS_FOLDER } from 'src/Upload/Upload.service';
+
+const assertImageId = (image: unknown) => {
+  if (typeof image !== 'string' || !image.startsWith(`${EVENEMENTS_FOLDER}/`)) {
+    throw new HttpException(`'image' must be a Cloudinary public_id in the '${EVENEMENTS_FOLDER}' folder`, HttpStatus.BAD_REQUEST);
+  }
+};
 
 @ApiTags('evenements')
 @ApiBearerAuth()
@@ -24,6 +31,7 @@ export class EvenementController {
     if (!image) {
       throw new HttpException("Missing 'image' property for evenement creation", HttpStatus.BAD_REQUEST);
     }
+    assertImageId(image);
     if (!type) {
       throw new HttpException("Missing 'type' property for evenement creation", HttpStatus.BAD_REQUEST);
     }
@@ -54,6 +62,9 @@ export class EvenementController {
   @ApiOperation({ summary: "Update a event" })
   @ApiBody({ type: UpdateEvenementDto })
   update(@Param('id') id: string, @Body() updateEvenementsDto: UpdateEvenementDto) {
+    if (updateEvenementsDto.image !== undefined) {
+      assertImageId(updateEvenementsDto.image);
+    }
 
     const payload: Prisma.EvenementUpdateInput = { ...updateEvenementsDto }
     return this.evenementsService.update(+id, payload)
