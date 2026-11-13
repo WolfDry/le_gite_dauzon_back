@@ -1,23 +1,16 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
+/** Le hash du mot de passe ne sort jamais de l'API. */
+const WITHOUT_PASSWORD = { password: true } as const;
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) { }
 
-  async create(data: Prisma.UserCreateInput) {
-    try {
-      return await this.prisma.user.create({ data });
-    } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Username already taken');
-        }
-      }
-      throw error;
-    }
+  create(data: Prisma.UserCreateInput) {
+    return this.prisma.user.create({ data, omit: WITHOUT_PASSWORD });
   }
 
   count() {
@@ -25,15 +18,17 @@ export class UsersService {
   }
 
   findAll() {
-    return this.prisma.user.findMany();
+    return this.prisma.user.findMany({ omit: WITHOUT_PASSWORD });
   }
 
   findOne(id: number) {
-    return this.prisma.user.findUnique({
+    return this.prisma.user.findUniqueOrThrow({
       where: { id },
+      omit: WITHOUT_PASSWORD,
     });
   }
-  findByEmail(email: string) {
+
+  findByEmailWithPassword(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
     });
@@ -43,10 +38,11 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data,
+      omit: WITHOUT_PASSWORD,
     });
   }
 
   remove(id: number) {
-    return this.prisma.user.delete({ where: { id } });
+    return this.prisma.user.delete({ where: { id }, omit: WITHOUT_PASSWORD });
   }
 }

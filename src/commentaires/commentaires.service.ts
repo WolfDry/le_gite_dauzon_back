@@ -14,8 +14,9 @@ export class CommentairesService {
     }
   }
 
-  findAll() {
+  findAll({ onlyVerified }: { onlyVerified: boolean }) {
     return this.prisma.commentaire.findMany({
+      where: onlyVerified ? { verif: true } : undefined,
       orderBy: {
         created: 'desc',
       }
@@ -23,7 +24,7 @@ export class CommentairesService {
   }
 
   findOne(id: number) {
-    return this.prisma.commentaire.findUnique({
+    return this.prisma.commentaire.findUniqueOrThrow({
       where: { id },
     });
   }

@@ -1,7 +1,4 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import * as bcrypt from 'bcryptjs';
-import * as request from 'supertest';
+import { ADMIN, createTestApp, TestApp } from '../testing/test-app';
 
 /**
  * Vérifie la séparation site public / back office :
@@ -10,102 +7,61 @@ import * as request from 'supertest';
  * La base de données et l'envoi de mails sont simulés.
  */
 
-const model = () => ({
-  findMany: jest.fn().mockResolvedValue([]),
-  findUnique: jest.fn().mockResolvedValue(null),
-  count: jest.fn().mockResolvedValue(1),
-  create: jest.fn().mockImplementation(async ({ data }) => ({ id: 1, ...data })),
-  update: jest.fn().mockImplementation(async ({ data }) => ({ id: 1, ...data })),
-  delete: jest.fn().mockResolvedValue({ id: 1 }),
-  deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-});
-
-const prisma = {
-  onModuleInit: jest.fn(),
-  $queryRaw: jest.fn().mockResolvedValue([1]),
-  user: model(),
-  client: model(),
-  reservation: model(),
-  supplement: model(),
-  supplementOnReservation: model(),
-  commentaire: model(),
-  tarif: model(),
-  evenement: model(),
+const REQUEST = {
+  debut: '2026-07-04',
+  fin: '2026-07-11',
+  nbPersonne: [{ label: 'Adultes', nb: 2 }],
+  email: 'a@b.fr',
+  phone: '06 12 34 56 78',
 };
 
-const ADMIN = { email: 'admin@example.com', password: 'secret' };
-
 describe("Contrôle d'accès de l'API", () => {
-  let app: INestApplication;
-  let token: string;
-
-  const http = () => request(app.getHttpServer());
+  let t: TestApp;
 
   beforeAll(async () => {
-    process.env.JWT_SECRET = 'test-secret';
-    process.env.SECRET_SALT = 'test-salt';
-
-    // Importés après avoir défini l'environnement : AuthModule lit JWT_SECRET au chargement.
-    const { AppModule } = await import('../app.module');
-    const { PrismaService } = await import('../prisma.service');
-    const { MailGunsService } = await import('../MailGun/mailGun.service');
-
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(PrismaService)
-      .useValue(prisma)
-      .overrideProvider(MailGunsService)
-      .useValue({ sendMail: jest.fn() })
-      .compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
-
-    prisma.user.findUnique.mockResolvedValue({
-      id: 1,
-      email: ADMIN.email,
-      password: bcrypt.hashSync(`${process.env.SECRET_SALT}${ADMIN.password}`, 4),
-    });
-    const login = await http().post('/auth/login').send(ADMIN).expect(201);
-    token = login.body.access_token;
+    t = await createTestApp();
   });
 
+  beforeEach(() => t.resetThrottle());
+
   afterAll(async () => {
-    await app.close();
+    await t.app.close();
   });
 
   it('délivre un jeton à la connexion, sans renvoyer le mot de passe', async () => {
-    const res = await http().post('/auth/login').send(ADMIN).expect(201);
+    const res = await t.http().post('/auth/login').send({ email: ADMIN.email, password: ADMIN.password }).expect(201);
     expect(res.body.access_token).toEqual(expect.any(String));
-    expect(res.body.user).toEqual({ id: 1, email: ADMIN.email });
+    expect(res.body.user).toEqual({ id: ADMIN.id, email: ADMIN.email });
 
-    await http().post('/auth/login').send({ ...ADMIN, password: 'faux' }).expect(401);
+    await t.http().post('/auth/login').send({ email: ADMIN.email, password: 'faux' }).expect(401);
   });
 
   describe('routes du site public (sans jeton)', () => {
     it.each([
       ['get', '/'],
       ['get', '/cron'],
-      ['get', '/reservations'],
+      ['get', '/reservations/disponibilites'],
       ['get', '/commentaires'],
       ['get', '/tarifs'],
       ['get', '/evenements'],
     ] as const)('%s %s est accessible', async (method, path) => {
-      await http()[method](path).expect(200);
+      await t.http()[method](path).expect(200);
     });
 
     it('accepte une demande de réservation', async () => {
-      await http()
-        .post('/reservations/request')
-        .send({ debut: '2026-07-04', fin: '2026-07-11', nbPersonne: [], email: 'a@b.fr', phone: '06' })
-        .expect(201);
+      await t.http().post('/reservations/request').send(REQUEST).expect(201);
     });
 
     it('accepte un message du formulaire de contact', async () => {
-      await http().post('/mailgun').send({ subject: 'autre', content: {} }).expect(201);
+      await t
+        .http()
+        .post('/mailgun')
+        .send({ subject: 'autre', content: { name: 'Jean', email: 'jean@example.com', message: 'Bonjour' } })
+        .expect(201);
     });
 
     it('reste accessible même avec un jeton invalide ou expiré', async () => {
-      await http().get('/tarifs').set('Authorization', 'Bearer invalide').expect(200);
+      await t.http().get('/tarifs').set('Authorization', 'Bearer invalide').expect(200);
     });
   });
 
@@ -116,6 +72,7 @@ describe("Contrôle d'accès de l'API", () => {
       ['get', '/clients/1'],
       ['patch', '/clients/1'],
       ['delete', '/clients/1'],
+      ['get', '/reservations'],
       ['post', '/reservations'],
       ['get', '/reservations/1'],
       ['patch', '/reservations/1'],
@@ -136,6 +93,7 @@ describe("Contrôle d'accès de l'API", () => {
       ['patch', '/evenements/1'],
       ['delete', '/evenements/1'],
       ['post', '/upload/signature'],
+      ['post', '/users'],
       ['get', '/users'],
       ['get', '/users/1'],
       ['patch', '/users/1'],
@@ -143,53 +101,68 @@ describe("Contrôle d'accès de l'API", () => {
     ] as const;
 
     it.each(adminRoutes)('%s %s est refusé sans jeton', async (method, path) => {
-      await http()[method](path).expect(401);
+      await t.http()[method](path).expect(401);
     });
 
     it('refuse un jeton invalide', async () => {
-      await http().get('/clients').set('Authorization', 'Bearer invalide').expect(401);
+      await t.http().get('/clients').set('Authorization', 'Bearer invalide').expect(401);
     });
 
     it('accepte le jeton obtenu à la connexion', async () => {
-      const auth = { Authorization: `Bearer ${token}` };
-      await http().get('/clients').set(auth).expect(200);
-      await http().get('/supplements').set(auth).expect(200);
-      await http().patch('/commentaires/1').set(auth).send({ verif: true }).expect(200);
-      await http().delete('/reservations/1').set(auth).expect(200);
+      await t.http().get('/clients').set(t.auth).expect(200);
+      await t.http().get('/reservations').set(t.auth).expect(200);
+      await t.http().get('/supplements').set(t.auth).expect(200);
+      await t.http().patch('/commentaires/1').set(t.auth).send({ verif: true }).expect(200);
+      await t.http().delete('/reservations/1').set(t.auth).expect(200);
     });
   });
 
   describe('création de commentaire', () => {
     const body = { name: 'Jean', commentaire: 'Super', note: 5, verif: true, created: '2020-01-01T00:00:00.000Z' };
 
-    beforeEach(() => prisma.commentaire.create.mockClear());
+    beforeEach(() => t.prisma.commentaire.create.mockClear());
 
     it("un visiteur ne peut ni valider ni antidater son commentaire", async () => {
-      await http().post('/commentaires').send(body).expect(201);
-      expect(prisma.commentaire.create).toHaveBeenCalledWith({
+      await t.http().post('/commentaires').send(body).expect(201);
+      expect(t.prisma.commentaire.create).toHaveBeenCalledWith({
         data: { name: 'Jean', commentaire: 'Super', note: 5 },
       });
     });
 
     it("l'admin peut créer un commentaire validé et daté", async () => {
-      await http().post('/commentaires').set('Authorization', `Bearer ${token}`).send(body).expect(201);
-      expect(prisma.commentaire.create).toHaveBeenCalledWith({
-        data: { name: 'Jean', commentaire: 'Super', note: 5, verif: true, created: body.created },
+      await t.http().post('/commentaires').set(t.auth).send(body).expect(201);
+      expect(t.prisma.commentaire.create).toHaveBeenCalledWith({
+        data: { name: 'Jean', commentaire: 'Super', note: 5, verif: true, created: new Date(body.created) },
       });
     });
   });
 
   describe("création d'utilisateur", () => {
-    const body = { email: 'nouveau@example.com', password: 'secret' };
+    const body = { email: 'nouveau@example.com', password: 'motdepasse-solide' };
 
-    it('est ouverte tant qu’aucun compte n’existe', async () => {
-      prisma.user.count.mockResolvedValueOnce(0);
-      await http().post('/users').send(body).expect(201);
+    it('exige un jeton, même quand aucun compte n’existe', async () => {
+      t.prisma.user.count.mockResolvedValueOnce(0);
+      await t.http().post('/users').send(body).expect(401);
     });
 
-    it('exige ensuite un jeton', async () => {
-      await http().post('/users').send(body).expect(401);
-      await http().post('/users').set('Authorization', `Bearer ${token}`).send(body).expect(201);
+    it("est possible pour l'admin connecté", async () => {
+      await t.http().post('/users').set(t.auth).send(body).expect(201);
+    });
+  });
+
+  describe('limite de débit', () => {
+    it('bloque les essais de connexion répétés (429 au 6e essai en une minute)', async () => {
+      for (let i = 0; i < 5; i++) {
+        await t.http().post('/auth/login').send({ email: ADMIN.email, password: 'faux' }).expect(401);
+      }
+      await t.http().post('/auth/login').send({ email: ADMIN.email, password: ADMIN.password }).expect(429);
+    });
+
+    it('bloque les demandes de réservation en rafale (429 à la 6e)', async () => {
+      for (let i = 0; i < 5; i++) {
+        await t.http().post('/reservations/request').send(REQUEST).expect(201);
+      }
+      await t.http().post('/reservations/request').send(REQUEST).expect(429);
     });
   });
 });

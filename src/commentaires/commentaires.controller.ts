@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, BadRequestException, ParseIntPipe } from '@nestjs/common';
 
 import { CommentairesService } from './commentaires.service';
 import { CreateCommentaireDto } from './dto/create-commentaires.dto';
@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { MailGunsService } from 'src/MailGun/mailGun.service';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser, Public } from 'src/auth/public.decorator';
+import { ThrottlePublicWrite } from 'src/common/throttle';
 
 @ApiTags('commentaires')
 @ApiBearerAuth()
@@ -15,20 +16,17 @@ export class CommentairesController {
   constructor(private readonly commentairesService: CommentairesService, private readonly mailGunService: MailGunsService) { }
 
   @Public()
+  @ThrottlePublicWrite()
   @Post()
   @ApiOperation({ summary: "Create a comment" })
   @ApiBody({ type: CreateCommentaireDto })
   async create(@Body() createCommentaireDto: CreateCommentaireDto, @CurrentUser() currentUser: AuthUser | null) {
     const { commentaire, name, note, verif, created } = createCommentaireDto;
-    if (!commentaire) {
-      throw new HttpException("Missing 'commentaire' property for commentaire creation", HttpStatus.BAD_REQUEST);
+
+    if (!currentUser && note < 1) {
+      throw new BadRequestException(['note must not be less than 1']);
     }
-    if (!name) {
-      throw new HttpException("Missing 'name' property for commentaire creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!note) {
-      throw new HttpException("Missing 'note' property for commentaire creation", HttpStatus.BAD_REQUEST);
-    }
+
     const payload: Prisma.CommentaireCreateInput = { commentaire, name, note }
 
     if (currentUser) {
@@ -49,28 +47,29 @@ export class CommentairesController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: "Get all comments" })
-  findAll() {
-    return this.commentairesService.findAll();
+  @ApiOperation({ summary: "Get comments (validated only without a token, all with the admin token)" })
+  findAll(@CurrentUser() currentUser: AuthUser | null) {
+    return this.commentairesService.findAll({ onlyVerified: !currentUser });
   }
 
   @Get(':id')
   @ApiOperation({ summary: "Get a comment by id" })
-  findOne(@Param('id') id: string) {
-    return this.commentairesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.commentairesService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: "Update a comment" })
-  update(@Param('id') id: string, @Body() updateCommentaireDto: UpdateCommentaireDto) {
+  @ApiBody({ type: UpdateCommentaireDto })
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateCommentaireDto: UpdateCommentaireDto) {
 
     const payload: Prisma.CommentaireUpdateInput = { ...updateCommentaireDto }
-    return this.commentairesService.update(+id, payload);
+    return this.commentairesService.update(id, payload);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: "Delete a comment by id" })
-  remove(@Param('id') id: string) {
-    return this.commentairesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.commentairesService.remove(id);
   }
 }

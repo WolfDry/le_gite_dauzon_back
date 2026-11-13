@@ -19,7 +19,7 @@ export class EvenementService {
   }
 
   findOne(id: number) {
-    return this.prisma.evenement.findUnique({
+    return this.prisma.evenement.findUniqueOrThrow({
       where: { id },
     });
   }

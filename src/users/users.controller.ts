@@ -1,18 +1,18 @@
 // src/users/users.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, UnauthorizedException, UseGuards } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ConflictException, ParseIntPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Prisma } from '@prisma/client';
 import { ApiBody, ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../auth/auth.service';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthUser, CurrentUser, Public } from '../auth/public.decorator';
-
-class LoginDto { email!: string; password!: string; }
+import { hashPassword } from '../auth/password';
+import { LoginDto } from '../auth/dto/login.dto';
+import { ThrottleLogin } from '../common/throttle';
 
 @ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(
@@ -20,24 +20,17 @@ export class UsersController {
     private readonly authService: AuthService,
   ) { }
 
-  @Public()
   @Post()
-  @ApiOperation({ summary: "Create a user (JWT required, except for the very first user)" })
+  @ApiOperation({ summary: "Create a user" })
   @ApiBody({ type: CreateUserDto })
-  @ApiBearerAuth()
-  async create(@Body() createUserDto: CreateUserDto, @CurrentUser() currentUser: AuthUser | null) {
-    if (!currentUser && (await this.usersService.count()) > 0) {
-      throw new UnauthorizedException();
-    }
+  async create(@Body() createUserDto: CreateUserDto) {
     const { email, password } = createUserDto;
-    if (!email) throw new HttpException("Missing 'email'", HttpStatus.BAD_REQUEST);
-    if (!password) throw new HttpException("Missing 'password'", HttpStatus.BAD_REQUEST);
-    const hash = bcrypt.hashSync(`${process.env.SECRET_SALT}${password}`, 10);
-    const payload: Prisma.UserCreateInput = { email, password: hash }
+    const payload: Prisma.UserCreateInput = { email, password: await hashPassword(password) }
     return this.usersService.create(payload);
   }
 
   @Public()
+  @ThrottleLogin()
   @Post('login')
   @ApiOperation({ summary: "Login & get JWT" })
   @ApiBody({ type: LoginDto })
@@ -48,33 +41,36 @@ export class UsersController {
   }
 
   @Get()
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: "Update a user" })
+  @ApiOperation({ summary: "Update a user (the password is hashed)" })
   @ApiBody({ type: UpdateUserDto })
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    const payload: Prisma.UserUpdateInput = { ...updateUserDto }
-    return this.usersService.update(+id, payload);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
+    const { email, password } = updateUserDto
+    const payload: Prisma.UserUpdateInput = {
+      email,
+      password: password !== undefined ? await hashPassword(password) : undefined,
+    }
+    return this.usersService.update(id, payload);
   }
 
   @Delete(':id')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @ApiOperation({ summary: "Delete a user (neither your own account nor the last one)" })
+  async remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: AuthUser) {
+    if (currentUser.userId === id) {
+      throw new ConflictException('Vous ne pouvez pas supprimer votre propre compte');
+    }
+    if ((await this.usersService.count()) <= 1) {
+      throw new ConflictException('Impossible de supprimer le dernier compte');
+    }
+    return this.usersService.remove(id);
   }
 }

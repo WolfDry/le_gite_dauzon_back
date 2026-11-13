@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { Prisma } from '@prisma/client';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('clients')
 @ApiBearerAuth()
@@ -13,25 +13,11 @@ export class ClientsController {
   constructor(private readonly clientsService: ClientsService) { }
 
   @Post()
-  async create(@Body() createClientDto: CreateClientDto) {
+  @ApiBody({ type: CreateClientDto })
+  create(@Body() createClientDto: CreateClientDto) {
     const { email, nom, prenom, telephone } = createClientDto;
-    if (!email) {
-      throw new HttpException("Missing 'email' property for client creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!nom) {
-      throw new HttpException("Missing 'nom' property for client creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!prenom) {
-      throw new HttpException("Missing 'prenom' property for client creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!telephone) {
-      throw new HttpException("Missing 'telephone' property for client creation", HttpStatus.BAD_REQUEST);
-    }
     const payload: Prisma.ClientCreateInput = { email, nom, prenom, telephone }
-
-    const result = await this.clientsService.create(payload);
-    return result;
-
+    return this.clientsService.create(payload);
   }
 
   @Get()
@@ -40,19 +26,20 @@ export class ClientsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.clientsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.clientsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClientDto: UpdateClientDto) {
+  @ApiBody({ type: UpdateClientDto })
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateClientDto: UpdateClientDto) {
 
     const payload: Prisma.ClientUpdateInput = { ...updateClientDto }
-    return this.clientsService.update(+id, payload);
+    return this.clientsService.update(id, payload);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.clientsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.clientsService.remove(id);
   }
 }

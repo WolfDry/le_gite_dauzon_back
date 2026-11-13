@@ -1,16 +1,32 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class UpdateClientDto {
 
-  @ApiProperty({ description: 'User email' })
+  @ApiProperty({ description: 'Client email', required: false })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
   readonly email?: string;
 
-  @ApiProperty({ description: 'User last name' })
+  @ApiProperty({ description: 'Client last name', required: false })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
   readonly nom?: string;
-  
-  @ApiProperty({ description: 'User first name' })
+
+  @ApiProperty({ description: 'Client first name', required: false })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
   readonly prenom?: string;
-  
-  @ApiProperty({ description: 'User phone number' })
+
+  @ApiProperty({ description: 'Client phone number', required: false })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
   readonly telephone?: string;
 }

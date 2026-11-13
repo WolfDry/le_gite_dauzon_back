@@ -1,23 +1,13 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class SupplementsService {
   constructor (private prisma: PrismaService) { }
 
-  async create(data: Prisma.SupplementCreateInput) {
-    try {
-      return await this.prisma.supplement.create({ data });
-    } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Label already taken');
-        }
-      }
-      throw error;
-    }
+  create(data: Prisma.SupplementCreateInput) {
+    return this.prisma.supplement.create({ data });
   }
 
   findAll() {
@@ -25,7 +15,7 @@ export class SupplementsService {
   }
 
   findOne(id: number) {
-    return this.prisma.supplement.findUnique({
+    return this.prisma.supplement.findUniqueOrThrow({
       where: { id },
     });
   }

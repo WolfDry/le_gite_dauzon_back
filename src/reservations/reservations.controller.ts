@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus } from '@nestjs/common'
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { CreateReservationDto } from './dto/create-reservation.dto'
 import { ReservationsService } from './reservations.service'
@@ -7,6 +7,8 @@ import { MailGunsService } from 'src/MailGun/mailGun.service'
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto'
 import { Public } from 'src/auth/public.decorator'
+import { ThrottlePublicWrite } from 'src/common/throttle'
+import { toNbPersonneJson } from './dto/nb-personne.dto'
 
 @ApiTags('reservations')
 @ApiBearerAuth()
@@ -19,32 +21,6 @@ export class ReservationsController {
   @ApiBody({ type: CreateReservationDto })
   async create(@Body() createReservationDto: CreateReservationDto) {
     const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone, verif } = createReservationDto
-    if (!tarif) {
-      throw new HttpException("Missing 'tarif' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!debut) {
-      throw new HttpException("Missing 'debut' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!fin) {
-      throw new HttpException("Missing 'fin' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!nbPersonne) {
-      throw new HttpException("Missing 'nbPersonne' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!clientId) {
-      if (!email) {
-        throw new HttpException("Missing 'email' property for client creation", HttpStatus.BAD_REQUEST)
-      }
-      if (!nom) {
-        throw new HttpException("Missing 'nom' property for client creation", HttpStatus.BAD_REQUEST)
-      }
-      if (!prenom) {
-        throw new HttpException("Missing 'prenom' property for client creation", HttpStatus.BAD_REQUEST)
-      }
-      if (!telephone) {
-        throw new HttpException("Missing 'telephone' property for client creation", HttpStatus.BAD_REQUEST)
-      }
-    }
     const validatedClient = {
       nom: nom as string,
       prenom: prenom as string,
@@ -55,7 +31,7 @@ export class ReservationsController {
       tarif,
       debut,
       fin,
-      nbPersonne,
+      nbPersonne: toNbPersonneJson(nbPersonne),
       verif,
       client: {
         connectOrCreate: {
@@ -81,31 +57,17 @@ export class ReservationsController {
   }
 
   @Public()
+  @ThrottlePublicWrite()
   @Post('/request')
-  @ApiOperation({ summary: "Create a reservation request" })
+  @ApiOperation({ summary: "Create a reservation request (public, always unconfirmed)" })
   @ApiBody({ type: CreateRequestReservationDto })
   async createRequest(@Body() createRequestReservationDto: CreateRequestReservationDto) {
-    const { debut, fin, nbPersonne, verif, email, phone } = createRequestReservationDto
-    if (!debut) {
-      throw new HttpException("Missing 'debut' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!fin) {
-      throw new HttpException("Missing 'fin' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!nbPersonne) {
-      throw new HttpException("Missing 'nbPersonne' property for reservation creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!email) {
-      throw new HttpException("Missing 'email' property for reservation request creation", HttpStatus.BAD_REQUEST)
-    }
-    if (!phone) {
-      throw new HttpException("Missing 'phone' property for reservation request creation", HttpStatus.BAD_REQUEST)
-    }
+    const { debut, fin, nbPersonne, email, phone } = createRequestReservationDto
     const payload: Prisma.ReservationCreateInput = {
       debut,
       fin,
-      nbPersonne,
-      verif
+      nbPersonne: toNbPersonneJson(nbPersonne),
+      verif: false
     }
 
     const result = await this.reservationsService.create(payload)
@@ -116,6 +78,13 @@ export class ReservationsController {
   }
 
   @Public()
+  @Get('disponibilites')
+  @ApiOperation({ summary: "Confirmed stays from January 1st of the current year (dates only, public)" })
+  findDisponibilites() {
+    const startOfYear = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
+    return this.reservationsService.findDisponibilites(startOfYear)
+  }
+
   @Get()
   @ApiOperation({ summary: "Get all reservations" })
   findAll() {
@@ -124,25 +93,24 @@ export class ReservationsController {
 
   @Get(':id')
   @ApiOperation({ summary: "Get a reservation by id" })
-  findOne(@Param('id') id: string) {
-    return this.reservationsService.findOne(+id)
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.reservationsService.findOne(id)
   }
 
   @Patch(':id')
   @ApiOperation({ summary: "Update a reservation" })
   @ApiBody({ type: UpdateReservationDto })
-  async update(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
+  async update(@Param('id', ParseIntPipe) id: number, @Body() updateReservationDto: UpdateReservationDto) {
 
     const { supplements, ...rest } = updateReservationDto
-    const payload: {} = { ...rest }
-    const updatedReservation = await this.reservationsService.update(+id, payload)
+    const updatedReservation = await this.reservationsService.update(id, rest)
 
-    if (updateReservationDto.supplements) {
-      await this.reservationsService.clearSupplements(+id)
+    if (supplements) {
+      await this.reservationsService.clearSupplements(id)
 
       await Promise.all(
-        updateReservationDto.supplements.map(supplement =>
-          this.reservationsService.addSupplementToReservation(+id, supplement)
+        supplements.map(supplement =>
+          this.reservationsService.addSupplementToReservation(id, supplement)
         )
       )
     }
@@ -153,7 +121,7 @@ export class ReservationsController {
 
   @Delete(':id')
   @ApiOperation({ summary: "Delete a reservation by id" })
-  remove(@Param('id') id: string) {
-    return this.reservationsService.remove(+id)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.reservationsService.remove(id)
   }
 }

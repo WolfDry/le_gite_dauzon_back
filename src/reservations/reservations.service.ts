@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma } from '@prisma/client';
+import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { toNbPersonneJson } from './dto/nb-personne.dto';
 
 @Injectable()
 export class ReservationsService {
@@ -31,6 +33,14 @@ export class ReservationsService {
   }
 
 
+  findDisponibilites(depuis: Date) {
+    return this.prisma.reservation.findMany({
+      where: { verif: true, fin: { gte: depuis } },
+      select: { debut: true, fin: true },
+      orderBy: { debut: 'asc' },
+    });
+  }
+
   findAll() {
     return this.prisma.reservation.findMany({
       include: {
@@ -46,7 +56,7 @@ export class ReservationsService {
 
 
   findOne(id: number) {
-    return this.prisma.reservation.findUnique({
+    return this.prisma.reservation.findUniqueOrThrow({
       include: {
         client: true,
         supplements: {
@@ -59,31 +69,13 @@ export class ReservationsService {
     });
   }
 
-  update(id: number, dto: {
-    debut?: string,
-    fin?: string,
-    tarif?: number,
-    verif?: boolean,
-    nbPersonne?: {
-      label: string
-      nb: number
-    }[],
-    clientId?: number,
-    client?: {
-      email?: string,
-      nom?: string,
-      prenom?: string,
-      telephone?: string
-    },
-    supplements?: { supplementId: number; nb: number; }[],
-    disconnectClient?: boolean
-  }) {
+  update(id: number, dto: Omit<UpdateReservationDto, 'supplements'>) {
     const data: Prisma.ReservationUpdateInput = {
-      debut: dto.debut ? new Date(dto.debut) : undefined,
-      fin: dto.fin ? new Date(dto.fin) : undefined,
+      debut: dto.debut,
+      fin: dto.fin,
       tarif: dto.tarif,
       verif: dto.verif,
-      nbPersonne: dto.nbPersonne as unknown as Prisma.InputJsonValue,
+      nbPersonne: dto.nbPersonne ? toNbPersonneJson(dto.nbPersonne) : undefined,
       client: (dto.clientId || dto.client || dto.disconnectClient) ? {
         connect: dto.clientId ? { id: dto.clientId } : undefined,
         update: dto.client ? {

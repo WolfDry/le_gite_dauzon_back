@@ -19,7 +19,7 @@ export class TarifsService {
   }
 
   findOne(id: number) {
-    return this.prisma.tarif.findUnique({
+    return this.prisma.tarif.findUniqueOrThrow({
       where: { id },
     });
   }

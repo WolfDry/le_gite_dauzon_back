@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 
 import { TarifsService } from './tarifs.service';
 import { CreateTarifsDto } from './dto/create-tarifs.dto';
@@ -15,28 +15,10 @@ export class TarifsController {
   @Post()
   @ApiOperation({ summary: "Create a tarif" })
   @ApiBody({ type: CreateTarifsDto })
-  async create(@Body() createTarifsDto: CreateTarifsDto) {
+  create(@Body() createTarifsDto: CreateTarifsDto) {
     const { desc, label, date, vacance, prix, frequence } = createTarifsDto;
-    if (!desc) {
-      throw new HttpException("Missing 'desc' property for tarif creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!label) {
-      throw new HttpException("Missing 'label' property for tarif creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!date) {
-      throw new HttpException("Missing 'startDate' property for tarif creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!prix) {
-      throw new HttpException("Missing 'prix' property for tarif creation", HttpStatus.BAD_REQUEST);
-    }
-    if (!frequence) {
-      throw new HttpException("Missing 'frequence' property for tarif creation", HttpStatus.BAD_REQUEST);
-    }
     const payload: Prisma.TarifCreateInput = { desc, label, date, vacance, prix, frequence }
-
-    const result = await this.tarifsService.create(payload)
-    return result;
-
+    return this.tarifsService.create(payload)
   }
 
   @Public()
@@ -48,22 +30,22 @@ export class TarifsController {
 
   @Get(':id')
   @ApiOperation({ summary: "Get a tarif by id" })
-  findOne(@Param('id') id: string) {
-    return this.tarifsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.tarifsService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: "Update a tarif" })
   @ApiBody({ type: UpdateTarifsDto })
-  update(@Param('id') id: string, @Body() updateTarifsDto: UpdateTarifsDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateTarifsDto: UpdateTarifsDto) {
 
     const payload: Prisma.TarifUpdateInput = { ...updateTarifsDto }
-    return this.tarifsService.update(+id, payload);
+    return this.tarifsService.update(id, payload);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: "Delete a tarif by id" })
-  remove(@Param('id') id: string) {
-    return this.tarifsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.tarifsService.remove(id);
   }
 }

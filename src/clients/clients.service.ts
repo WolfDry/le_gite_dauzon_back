@@ -19,7 +19,7 @@ export class ClientsService {
   }
 
   findOne(id: number) {
-    return this.prisma.client.findUnique({
+    return this.prisma.client.findUniqueOrThrow({
       where: { id },
     });
   }

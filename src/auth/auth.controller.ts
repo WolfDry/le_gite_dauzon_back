@@ -2,8 +2,8 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from './public.decorator';
-
-class LoginDto { email!: string; password!: string; }
+import { LoginDto } from './dto/login.dto';
+import { ThrottleLogin } from '../common/throttle';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -11,6 +11,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) { }
 
   @Public()
+  @ThrottleLogin()
   @Post('login')
   @ApiOperation({ summary: 'Login & get JWT' })
   @ApiBody({ type: LoginDto })
