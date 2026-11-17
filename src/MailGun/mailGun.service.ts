@@ -16,6 +16,19 @@ type Content = {
   }[]
 }
 
+const escapeHtml = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const formatDate = (value?: Date | null) =>
+  value ? new Date(value).toLocaleDateString('fr-FR', { timeZone: 'UTC' }) : '?'
+
+const paragraphs = (text: string) => escapeHtml(text).replace(/\r?\n/g, '<br>')
+
 @Injectable()
 export class MailGunsService {
   private mg
@@ -53,17 +66,35 @@ export class MailGunsService {
     }
 
     switch (subject) {
-      case 'reservation':
+      case 'reservation': {
+        const personnes = (content?.nbPersonne ?? [])
+          .filter((np) => np.nb > 0)
+          .map((np) => `${np.label} : ${np.nb}`)
+          .join(', ')
+        const dates = `Du ${formatDate(content?.debut)} au ${formatDate(content?.fin)}`
         data = {
-          subject: 'Nouvelle demande de reservation',
-          text: 'Vous avez une nouvelle demande de reservation',
-          html: `<h1>Vous avez une nouvelle demande de reservation</h1>
-          <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
-          <p>Téléphone : ${content ? content.phone ? content.phone : 'Pas de numéro de téléphone (pas normal)' : 'Pas de numéro de téléphone (pas normal)'}</p>
-          <p>Nombre de personnes : ${content ? content.nbPersonne ? content.nbPersonne.map((np) => np.label + " : " + np.nb).join(", ") : 'Pas de nombre de personnes (pas normal)' : 'Pas de nombre de personnes (pas normal)'}</p>
-          <p>Date : ${content ? content.debut || content.fin ? "Du " + new Date(content.debut!).toLocaleDateString() + " au " + new Date(content.fin!).toLocaleDateString() : 'Pas de date (pas normal)' : 'Pas de date (pas normal)'}</p>`
+          subject: `Nouvelle demande de réservation${content?.name ? ` de ${content.name.replace(/\s+/g, ' ')}` : ''}`,
+          text: [
+            'Vous avez une nouvelle demande de réservation.',
+            `Nom : ${content?.name ?? ''}`,
+            `E-mail : ${content?.email ?? ''}`,
+            `Téléphone : ${content?.phone ?? ''}`,
+            `Personnes : ${personnes}`,
+            `Dates : ${dates}`,
+            content?.message ? `Message :\n${content.message}` : '',
+            'La demande est enregistrée dans l\'admin, rubrique Réservations.',
+          ].filter(Boolean).join('\n'),
+          html: `<h1>Vous avez une nouvelle demande de réservation</h1>
+          <p>Nom : ${escapeHtml(content?.name)}</p>
+          <p>E-mail : ${escapeHtml(content?.email)}</p>
+          <p>Téléphone : ${escapeHtml(content?.phone)}</p>
+          <p>Personnes : ${escapeHtml(personnes)}</p>
+          <p>Dates : ${escapeHtml(dates)}</p>
+          ${content?.message ? `<p>Message :<br>${paragraphs(content.message)}</p>` : ''}
+          <p>La demande est enregistrée dans l\'admin, rubrique Réservations.</p>`
         }
         break
+      }
       case 'commentaire':
         data = {
           subject: 'Nouveau commentaire',
@@ -75,9 +106,9 @@ export class MailGunsService {
         data = {
           subject: 'Quelqu\'un essaye de vous contacter',
           text: 'Quelqu\'un essaye de vous contacter',
-          html: `<p>${content ? content.name ? content.name : 'pas de nom (pas normal)' : 'pas de nom (pas normal)'}</p>
-          <p>Email : ${content ? content.email : 'pas d\'email (pas normal)'}</p>
-        <p>${content ? content.message ? content.message : 'pas de message (pas normal)' : 'pas de message (pas normal)'}</p>
+          html: `<p>${escapeHtml(content?.name || 'pas de nom (pas normal)')}</p>
+          <p>Email : ${escapeHtml(content?.email || 'pas d\'email (pas normal)')}</p>
+        <p>${content?.message ? paragraphs(content.message) : 'pas de message (pas normal)'}</p>
         `,
         }
         break
@@ -91,6 +122,7 @@ export class MailGunsService {
       subject: data.subject,
       text: data.text,
       html: data.html,
+      ...(content?.email ? { 'h:Reply-To': content.email } : {}),
     })
   }
 }

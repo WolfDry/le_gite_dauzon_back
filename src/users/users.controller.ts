@@ -20,6 +20,7 @@ export class UsersController {
     private readonly authService: AuthService,
   ) { }
 
+  @Public()
   @Post()
   @ApiOperation({ summary: "Create a user" })
   @ApiBody({ type: CreateUserDto })

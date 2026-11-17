@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Logger } from '@nestjs/common'
+import { Prisma, ReservationSource, ReservationStatut } from '@prisma/client'
 import { CreateReservationDto } from './dto/create-reservation.dto'
 import { ReservationsService } from './reservations.service'
 import { UpdateReservationDto } from './dto/update-reservation.dto'
@@ -14,13 +14,15 @@ import { toNbPersonneJson } from './dto/nb-personne.dto'
 @ApiBearerAuth()
 @Controller('reservations')
 export class ReservationsController {
+  private readonly logger = new Logger(ReservationsController.name)
+
   constructor(private readonly reservationsService: ReservationsService, private readonly mailGunService: MailGunsService) { }
 
   @Post()
   @ApiOperation({ summary: "Create a reservation" })
   @ApiBody({ type: CreateReservationDto })
   async create(@Body() createReservationDto: CreateReservationDto) {
-    const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone, verif } = createReservationDto
+    const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone, statut } = createReservationDto
     const validatedClient = {
       nom: nom as string,
       prenom: prenom as string,
@@ -32,7 +34,8 @@ export class ReservationsController {
       debut,
       fin,
       nbPersonne: toNbPersonneJson(nbPersonne),
-      verif,
+      statut: statut ?? ReservationStatut.CONFIRMEE,
+      source: ReservationSource.ADMIN,
       client: {
         connectOrCreate: {
           where: {
@@ -59,27 +62,32 @@ export class ReservationsController {
   @Public()
   @ThrottlePublicWrite()
   @Post('/request')
-  @ApiOperation({ summary: "Create a reservation request (public, always unconfirmed)" })
+  @ApiOperation({ summary: "Create a reservation request (public, always DEMANDE)" })
   @ApiBody({ type: CreateRequestReservationDto })
-  async createRequest(@Body() createRequestReservationDto: CreateRequestReservationDto) {
-    const { debut, fin, nbPersonne, email, phone } = createRequestReservationDto
-    const payload: Prisma.ReservationCreateInput = {
-      debut,
-      fin,
-      nbPersonne: toNbPersonneJson(nbPersonne),
-      verif: false
+  async createRequest(@Body() dto: CreateRequestReservationDto) {
+    const reservation = await this.reservationsService.createRequest(dto)
+
+    try {
+      await this.mailGunService.sendMail('reservation', {
+        name: dto.nom,
+        email: dto.email,
+        phone: dto.phone,
+        message: dto.message,
+        debut: dto.debut,
+        fin: dto.fin,
+        nbPersonne: dto.nbPersonne,
+      })
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Mail de la demande de réservation ${reservation.id} non envoyé : ${reason}`)
     }
 
-    const result = await this.reservationsService.create(payload)
-
-    this.mailGunService.sendMail('reservation', { email, phone, debut, fin, nbPersonne })
-    return result
-
+    return { id: reservation.id }
   }
 
   @Public()
   @Get('disponibilites')
-  @ApiOperation({ summary: "Confirmed stays from January 1st of the current year (dates only, public)" })
+  @ApiOperation({ summary: "Booked stays (OPTION or CONFIRMEE) from January 1st of the current year (dates only, public)" })
   findDisponibilites() {
     const startOfYear = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
     return this.reservationsService.findDisponibilites(startOfYear)

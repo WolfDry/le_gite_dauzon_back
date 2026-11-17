@@ -9,6 +9,9 @@
       "includeFiles": "node_modules/swagger-ui-dist/**"
     }
   },
+  "crons": [
+    { "path": "/cron/purge-demandes", "schedule": "0 4 * * *" }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
   ]

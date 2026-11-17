@@ -7,5 +7,6 @@ import { MailGunsService } from 'src/MailGun/mailGun.service';
 @Module({
   controllers: [ReservationsController],
   providers: [ReservationsService, ClientsService, MailGunsService],
+  exports: [ReservationsService],
 })
 export class ReservationsModule {}

@@ -26,6 +26,19 @@ enum EventType {
   EVENT
 }
 
+enum ReservationStatut {
+  DEMANDE
+  OPTION
+  CONFIRMEE
+  REFUSEE
+  ANNULEE
+}
+
+enum ReservationSource {
+  SITE
+  ADMIN
+}
+
 model User {
   id       Int    @id @unique @default(autoincrement())
   email    String @unique
@@ -49,12 +62,22 @@ model Reservation {
   fin        DateTime @db.Date
   dateAjout  DateTime @default(now())
   nbPersonne Json
-  verif      Boolean? @default(false)
+
+  statut          ReservationStatut @default(DEMANDE)
+  statutModifieLe DateTime          @default(now())
+  source          ReservationSource @default(ADMIN)
+
+  demandeurNom       String?
+  demandeurEmail     String?
+  demandeurTelephone String?
+  message            String?
 
   client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
   clientId Int?
 
   supplements SupplementOnReservation[]
+
+  @@index([statut, fin])
 }
 
 model Supplement {

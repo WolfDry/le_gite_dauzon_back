@@ -1,10 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { ReservationStatut } from '@prisma/client'
 import { Type } from 'class-transformer'
 import {
   IsArray,
   IsBoolean,
   IsDate,
   IsEmail,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -45,6 +47,39 @@ export class UpdateReservationClientDto {
   readonly telephone?: string
 }
 
+export class NewReservationClientDto {
+
+  constructor(email: string, nom: string, prenom: string, telephone: string) {
+    this.email = email
+    this.nom = nom
+    this.prenom = prenom
+    this.telephone = telephone
+  }
+
+  @ApiProperty()
+  @IsEmail()
+  @MaxLength(254)
+  readonly email: string
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  readonly nom: string
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  readonly prenom: string
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  readonly telephone: string
+}
+
 export class UpdateReservationDto {
 
   @ApiProperty({ description: 'Prix du séjour (0 accepté, null pour une demande non chiffrée)', required: false, nullable: true })
@@ -73,15 +108,15 @@ export class UpdateReservationDto {
   @Type(() => NbPersonneDto)
   readonly nbPersonne?: NbPersonneDto[]
 
-  @ApiProperty({ description: 'Client existant à rattacher', required: false, nullable: true })
+  @ApiProperty({ description: 'Client existant à rattacher (null pour détacher le client)', required: false, nullable: true })
   @IsOptional()
   @IsInt()
   readonly clientId?: number | null
 
-  @ApiProperty({ description: 'Réservation confirmée', required: false })
+  @ApiProperty({ description: 'Statut de la réservation (OPTION et CONFIRMEE exigent un client et un tarif)', enum: ReservationStatut, required: false })
   @IsOptional()
-  @IsBoolean()
-  readonly verif?: boolean
+  @IsEnum(ReservationStatut)
+  readonly statut?: ReservationStatut
 
   @ApiProperty({ description: 'Suppléments (remplacent les suppléments existants)', type: [SupplementLineDto], required: false })
   @IsOptional()
@@ -95,6 +130,12 @@ export class UpdateReservationDto {
   @ValidateNested()
   @Type(() => UpdateReservationClientDto)
   readonly client?: UpdateReservationClientDto
+
+  @ApiProperty({ description: 'Crée une fiche client et la rattache (ignoré si clientId est fourni)', type: NewReservationClientDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NewReservationClientDto)
+  readonly newClient?: NewReservationClientDto
 
   @ApiProperty({ description: 'Détacher le client de la réservation', required: false })
   @IsOptional()

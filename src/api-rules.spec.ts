@@ -17,6 +17,7 @@ const REQUEST = {
     { label: 'Adultes', nb: 2 },
     { label: 'Enfants', nb: 0 },
   ],
+  nom: 'Marie Dupont',
   email: 'a@b.fr',
   phone: '06 12 34 56 78',
 };
@@ -38,7 +39,7 @@ describe("Règles de l'API", () => {
   });
 
   describe('disponibilités publiques', () => {
-    it('ne renvoie que les dates des séjours confirmés depuis le 1er janvier', async () => {
+    it('ne renvoie que les dates des options et séjours confirmés depuis le 1er janvier', async () => {
       t.prisma.reservation.findMany.mockResolvedValueOnce([
         { debut: new Date('2026-07-04'), fin: new Date('2026-07-11') },
       ]);
@@ -48,7 +49,7 @@ describe("Règles de l'API", () => {
       expect(res.body).toEqual([{ debut: '2026-07-04T00:00:00.000Z', fin: '2026-07-11T00:00:00.000Z' }]);
       const startOfYear = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
       expect(t.prisma.reservation.findMany).toHaveBeenCalledWith({
-        where: { verif: true, fin: { gte: startOfYear } },
+        where: { statut: { in: ['OPTION', 'CONFIRMEE'] }, fin: { gte: startOfYear } },
         select: { debut: true, fin: true },
         orderBy: { debut: 'asc' },
       });
@@ -56,22 +57,42 @@ describe("Règles de l'API", () => {
   });
 
   describe('demande de réservation du site', () => {
-    it('est toujours enregistrée non confirmée, sans champ inconnu', async () => {
-      await t
+    it('enregistre les coordonnées, toujours au statut DEMANDE, sans champ inconnu', async () => {
+      const res = await t
         .http()
         .post('/reservations/request')
-        .send({ ...REQUEST, verif: true, tarif: 0, clientId: 3 })
+        .send({ ...REQUEST, nom: '  Marie Dupont ', message: 'Arrivée tardive', statut: 'CONFIRMEE', tarif: 0, clientId: 3 })
         .expect(201);
 
+      expect(res.body).toEqual({ id: 1 });
       expect(t.prisma.reservation.create).toHaveBeenCalledWith({
         data: {
           debut: new Date('2026-07-04'),
           fin: new Date('2026-07-11'),
           nbPersonne: REQUEST.nbPersonne,
-          verif: false,
+          statut: 'DEMANDE',
+          source: 'SITE',
+          demandeurNom: 'Marie Dupont',
+          demandeurEmail: 'a@b.fr',
+          demandeurTelephone: '06 12 34 56 78',
+          message: 'Arrivée tardive',
         },
       });
-      expect(t.mail.sendMail).toHaveBeenCalledWith('reservation', expect.objectContaining({ email: 'a@b.fr' }));
+      expect(t.mail.sendMail).toHaveBeenCalledWith(
+        'reservation',
+        expect.objectContaining({ name: 'Marie Dupont', email: 'a@b.fr', message: 'Arrivée tardive' }),
+      );
+    });
+
+    it("attend l'envoi du mail et garde la demande si le mail échoue", async () => {
+      t.mail.sendMail.mockRejectedValueOnce(new Error('Mailgun indisponible'));
+      await t.http().post('/reservations/request').send(REQUEST).expect(201);
+      expect(t.prisma.reservation.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('enregistre un message vide comme absent', async () => {
+      await t.http().post('/reservations/request').send({ ...REQUEST, message: '   ' }).expect(201);
+      expect(t.prisma.reservation.create.mock.calls[0][0].data.message).toBeNull();
     });
 
     it.each([
@@ -80,6 +101,9 @@ describe("Règles de l'API", () => {
       ['une date invalide', { debut: 'pas une date' }],
       ['un e-mail invalide', { email: 'pas-un-email' }],
       ['un téléphone vide', { phone: '' }],
+      ['un nom absent', { nom: undefined }],
+      ['un nom fait d’espaces', { nom: '   ' }],
+      ['un message trop long', { message: 'x'.repeat(2001) }],
       ['zéro personne', { nbPersonne: [{ label: 'Adultes', nb: 0 }] }],
       ['un nombre de personnes négatif', { nbPersonne: [{ label: 'Adultes', nb: -1 }] }],
     ])('refuse %s (400)', async (_label, override) => {
@@ -92,7 +116,141 @@ describe("Règles de l'API", () => {
     });
   });
 
+  describe('statut des réservations (admin)', () => {
+    const DEMANDE = { statut: 'DEMANDE', clientId: null, tarif: null };
+    const NEW_CLIENT = { nom: 'Dupont', prenom: 'Marie', email: 'a@b.fr', telephone: '06 12 34 56 78' };
+
+    it("une réservation saisie dans l'admin est confirmée par défaut", async () => {
+      await t
+        .http()
+        .post('/reservations')
+        .set(t.auth)
+        .send({ tarif: 500, debut: '2026-08-01', fin: '2026-08-08', nbPersonne: [], clientId: 1 })
+        .expect(201);
+      expect(t.prisma.reservation.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ statut: 'CONFIRMEE', source: 'ADMIN' }),
+      });
+    });
+
+    it.each(['OPTION', 'CONFIRMEE'])('refuse de passer en %s une demande sans client ni tarif (400)', async (statut) => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(DEMANDE);
+      await t.http().patch('/reservations/1').set(t.auth).send({ statut }).expect(400);
+      expect(t.prisma.reservation.update).not.toHaveBeenCalled();
+    });
+
+    it('confirme une demande en créant la fiche client', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(DEMANDE);
+      await t
+        .http()
+        .patch('/reservations/1')
+        .set(t.auth)
+        .send({ statut: 'CONFIRMEE', tarif: 650, newClient: NEW_CLIENT })
+        .expect(200);
+      expect(t.prisma.reservation.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({
+          statut: 'CONFIRMEE',
+          statutModifieLe: expect.any(Date),
+          tarif: 650,
+          client: { create: NEW_CLIENT },
+        }),
+      });
+    });
+
+    it('confirme une demande en la rattachant à un client existant', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(DEMANDE);
+      await t
+        .http()
+        .patch('/reservations/1')
+        .set(t.auth)
+        .send({ statut: 'OPTION', tarif: 650, clientId: 4, newClient: NEW_CLIENT })
+        .expect(200);
+      expect(t.prisma.reservation.update.mock.calls[0][0].data.client).toEqual({ connect: { id: 4 } });
+    });
+
+    it('refuse une demande sans exiger de client', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(DEMANDE);
+      await t.http().patch('/reservations/1').set(t.auth).send({ statut: 'REFUSEE' }).expect(200);
+      expect(t.prisma.reservation.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({ statut: 'REFUSEE', statutModifieLe: expect.any(Date) }),
+      });
+    });
+
+    it('ne change pas la date de statut si le statut ne change pas', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce({ statut: 'CONFIRMEE', clientId: 2, tarif: 500 });
+      await t.http().patch('/reservations/1').set(t.auth).send({ statut: 'CONFIRMEE', tarif: 600 }).expect(200);
+      const { data } = t.prisma.reservation.update.mock.calls[0][0];
+      expect(data.statut).toBeUndefined();
+      expect(data.statutModifieLe).toBeUndefined();
+    });
+
+    it('détache le client quand clientId vaut null', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce({ statut: 'DEMANDE', clientId: 2, tarif: null });
+      await t.http().patch('/reservations/1').set(t.auth).send({ clientId: null }).expect(200);
+      expect(t.prisma.reservation.update.mock.calls[0][0].data.client).toEqual({ disconnect: true });
+    });
+
+    it("refuse de détacher le client d'une réservation confirmée", async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce({ statut: 'CONFIRMEE', clientId: 2, tarif: 500 });
+      await t.http().patch('/reservations/1').set(t.auth).send({ clientId: null }).expect(400);
+    });
+
+    it("ignore les coordonnées client d'une réservation sans client (pas d'erreur 500)", async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(DEMANDE);
+      await t.http().patch('/reservations/1').set(t.auth).send({ client: { nom: 'Dupont' } }).expect(200);
+      expect(t.prisma.reservation.update.mock.calls[0][0].data.client).toBeUndefined();
+    });
+
+    it('refuse un statut inconnu', async () => {
+      await t.http().patch('/reservations/1').set(t.auth).send({ statut: 'PAYEE' }).expect(400);
+    });
+  });
+
+  describe('purge automatique des demandes', () => {
+    const SECRET = 'cron-secret-de-test';
+
+    afterEach(() => {
+      delete process.env.CRON_SECRET;
+    });
+
+    it('refuse un appel sans le secret, ou si le secret n’est pas configuré', async () => {
+      await t.http().get('/cron/purge-demandes').expect(401);
+      process.env.CRON_SECRET = SECRET;
+      await t.http().get('/cron/purge-demandes').expect(401);
+      await t.http().get('/cron/purge-demandes').set('Authorization', 'Bearer faux').expect(401);
+      await t.http().get('/cron/purge-demandes').set(t.auth).expect(401);
+      expect(t.prisma.reservation.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('supprime les demandes refusées et les demandes jamais traitées depuis 90 jours', async () => {
+      process.env.CRON_SECRET = SECRET;
+      t.prisma.reservation.deleteMany.mockResolvedValueOnce({ count: 3 });
+      const before = Date.now();
+
+      const res = await t.http().get('/cron/purge-demandes').set('Authorization', `Bearer ${SECRET}`).expect(200);
+
+      expect(res.body).toEqual({ supprimees: 3 });
+      const { where } = t.prisma.reservation.deleteMany.mock.calls[0][0];
+      const limite: Date = where.OR[0].statutModifieLe.lt;
+      expect(where).toEqual({
+        OR: [
+          { statut: 'REFUSEE', statutModifieLe: { lt: limite } },
+          { statut: 'DEMANDE', fin: { lt: limite } },
+        ],
+      });
+      const days = (before - limite.getTime()) / 86_400_000;
+      expect(days).toBeGreaterThan(89.99);
+      expect(days).toBeLessThan(90.01);
+    });
+  });
+
   describe('commentaires', () => {
+    it("enregistre le commentaire même si le mail de notification échoue", async () => {
+      t.mail.sendMail.mockRejectedValueOnce(new Error('Mailgun indisponible'));
+      await t.http().post('/commentaires').send({ name: 'Jean', commentaire: 'Super', note: 5 }).expect(201);
+    });
+
     it('le public ne voit que les commentaires validés', async () => {
       await t.http().get('/commentaires').expect(200);
       expect(t.prisma.commentaire.findMany).toHaveBeenCalledWith(
@@ -195,7 +353,7 @@ describe("Règles de l'API", () => {
         .http()
         .post('/reservations')
         .set(t.auth)
-        .send({ tarif: 0, debut: '2026-08-01', fin: '2026-08-08', nbPersonne: [], clientId: 1, verif: true })
+        .send({ tarif: 0, debut: '2026-08-01', fin: '2026-08-08', nbPersonne: [], clientId: 1, statut: 'CONFIRMEE' })
         .expect(201);
     });
 
@@ -219,7 +377,7 @@ describe("Règles de l'API", () => {
         debut: '2026-08-01T00:00:00.000Z',
         fin: '2026-08-08T00:00:00.000Z',
         tarif: 650,
-        verif: true,
+        statut: 'CONFIRMEE',
         nbPersonne: [{ label: 'Adultes', nb: 2 }],
         clientId: 3,
         email: '',
@@ -229,7 +387,7 @@ describe("Règles de l'API", () => {
         supplements: [{ supplementId: 1, nb: 1 }],
       };
       await t.http().post('/reservations').set(t.auth).send(body).expect(201);
-      await t.http().patch('/reservations/1').set(t.auth).send({ ...body, clientId: null }).expect(200);
+      await t.http().patch('/reservations/1').set(t.auth).send(body).expect(200);
 
       expect(t.prisma.reservation.update).toHaveBeenCalledWith({
         where: { id: 1 },

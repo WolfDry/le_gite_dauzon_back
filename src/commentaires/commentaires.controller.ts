@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, BadRequestException, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, BadRequestException, ParseIntPipe, Logger } from '@nestjs/common';
 
 import { CommentairesService } from './commentaires.service';
 import { CreateCommentaireDto } from './dto/create-commentaires.dto';
@@ -13,6 +13,8 @@ import { ThrottlePublicWrite } from 'src/common/throttle';
 @ApiBearerAuth()
 @Controller('commentaires')
 export class CommentairesController {
+  private readonly logger = new Logger(CommentairesController.name);
+
   constructor(private readonly commentairesService: CommentairesService, private readonly mailGunService: MailGunsService) { }
 
   @Public()
@@ -40,7 +42,12 @@ export class CommentairesController {
     }
 
     const result = await this.commentairesService.create(payload)
-    this.mailGunService.sendMail('commentaire')
+    try {
+      await this.mailGunService.sendMail('commentaire')
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Mail du commentaire ${result.id} non envoyé : ${reason}`)
+    }
     return result;
 
   }

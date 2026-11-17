@@ -1,10 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { ReservationStatut } from '@prisma/client'
 import { Type } from 'class-transformer'
 import {
   IsArray,
-  IsBoolean,
   IsDate,
   IsEmail,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -21,7 +22,7 @@ const isNewClient = (dto: CreateReservationDto) => dto.clientId === null || dto.
 
 export class CreateReservationDto {
 
-  constructor(tarif: number, debut: Date, fin: Date, nbPersonne: NbPersonneDto[], clientId?: number | null, nom?: string, prenom?: string, email?: string, telephone?: string, verif?: boolean, supplements?: SupplementLineDto[]) {
+  constructor(tarif: number, debut: Date, fin: Date, nbPersonne: NbPersonneDto[], clientId?: number | null, nom?: string, prenom?: string, email?: string, telephone?: string, statut?: ReservationStatut, supplements?: SupplementLineDto[]) {
     this.tarif = tarif;
     this.debut = debut;
     this.fin = fin;
@@ -31,7 +32,7 @@ export class CreateReservationDto {
     this.prenom = prenom;
     this.email = email;
     this.telephone = telephone;
-    this.verif = verif;
+    this.statut = statut;
     this.supplements = supplements;
   }
 
@@ -89,10 +90,10 @@ export class CreateReservationDto {
   @MaxLength(30)
   readonly telephone?: string
 
-  @ApiProperty({ description: 'Réservation confirmée', required: false })
+  @ApiProperty({ description: 'Statut (CONFIRMEE par défaut pour une réservation saisie dans l’admin)', enum: ReservationStatut, required: false })
   @IsOptional()
-  @IsBoolean()
-  readonly verif?: boolean
+  @IsEnum(ReservationStatut)
+  readonly statut?: ReservationStatut
 
   @ApiProperty({ description: 'Suppléments rattachés à la réservation', type: [SupplementLineDto], required: false })
   @IsOptional()
