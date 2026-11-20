@@ -3,7 +3,9 @@ import { PrismaService } from 'src/prisma.service';
 import { Prisma, ReservationSource, ReservationStatut } from '@prisma/client';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto';
-import { toNbPersonneJson } from './dto/nb-personne.dto';
+import { SupplementLineDto, toNbPersonneJson } from './dto/nb-personne.dto';
+
+export type PricedSupplementLine = { supplementId: number; nb: number; tarif: number };
 
 export const STATUTS_BLOQUANTS: ReservationStatut[] = [ReservationStatut.OPTION, ReservationStatut.CONFIRMEE];
 
@@ -41,12 +43,36 @@ export class ReservationsService {
     });
   }
 
-  async addSupplementToReservation(reservationId: number, { supplementId, nb }: { supplementId: number; nb: number }) {
+  /**
+   * Complète chaque ligne avec son prix : celui envoyé par l'admin, sinon le prix actuel du supplément.
+   * À appeler avant d'écrire la réservation, pour refuser un supplément inconnu sans rien enregistrer.
+   */
+  async priceSupplements(lines: SupplementLineDto[]): Promise<PricedSupplementLine[]> {
+    const missing = [...new Set(lines.filter((l) => l.tarif === undefined).map((l) => l.supplementId))];
+    const catalogue = missing.length
+      ? await this.prisma.supplement.findMany({ where: { id: { in: missing } }, select: { id: true, tarif: true } })
+      : [];
+    const prices = new Map(catalogue.map((s) => [s.id, s.tarif]));
+
+    const unknown = missing.filter((id) => !prices.has(id));
+    if (unknown.length) {
+      throw new BadRequestException([`Supplément introuvable : ${unknown.join(', ')}`]);
+    }
+
+    return lines.map(({ supplementId, nb, tarif }) => ({
+      supplementId,
+      nb,
+      tarif: tarif ?? (prices.get(supplementId) as number),
+    }));
+  }
+
+  async addSupplementToReservation(reservationId: number, { supplementId, nb, tarif }: PricedSupplementLine) {
     return this.prisma.supplementOnReservation.create({
       data: {
         reservationId,
         supplementId,
-        nb
+        nb,
+        tarif
       }
     })
   }

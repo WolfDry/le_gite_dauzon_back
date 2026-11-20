@@ -46,11 +46,12 @@ export class ReservationsController {
       }
     }
 
+    const supplements = await this.reservationsService.priceSupplements(createReservationDto.supplements ?? [])
     const result = await this.reservationsService.create(payload)
 
-    if (createReservationDto.supplements?.length) {
+    if (supplements.length) {
       await Promise.all(
-        createReservationDto.supplements.map(supplement =>
+        supplements.map(supplement =>
           this.reservationsService.addSupplementToReservation(result.id, supplement)
         )
       )
@@ -110,7 +111,8 @@ export class ReservationsController {
   @ApiBody({ type: UpdateReservationDto })
   async update(@Param('id', ParseIntPipe) id: number, @Body() updateReservationDto: UpdateReservationDto) {
 
-    const { supplements, ...rest } = updateReservationDto
+    const { supplements: lines, ...rest } = updateReservationDto
+    const supplements = lines && await this.reservationsService.priceSupplements(lines)
     const updatedReservation = await this.reservationsService.update(id, rest)
 
     if (supplements) {

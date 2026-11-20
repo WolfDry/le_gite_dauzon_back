@@ -386,6 +386,8 @@ describe("Règles de l'API", () => {
         telephone: '',
         supplements: [{ supplementId: 1, nb: 1 }],
       };
+      // Une fois pour la création, une fois pour la modification.
+      t.prisma.supplement.findMany.mockResolvedValueOnce([{ id: 1, tarif: 40 }]).mockResolvedValueOnce([{ id: 1, tarif: 40 }]);
       await t.http().post('/reservations').set(t.auth).send(body).expect(201);
       await t.http().patch('/reservations/1').set(t.auth).send(body).expect(200);
 
@@ -399,8 +401,46 @@ describe("Règles de l'API", () => {
         }),
       });
       expect(t.prisma.supplementOnReservation.create).toHaveBeenCalledWith({
-        data: { reservationId: 1, supplementId: 1, nb: 1 },
+        data: { reservationId: 1, supplementId: 1, nb: 1, tarif: 40 },
       });
+    });
+
+    it('enregistre le prix du supplément choisi pour la réservation, sans relire le catalogue', async () => {
+      await t
+        .http()
+        .patch('/reservations/1')
+        .set(t.auth)
+        .send({ supplements: [{ supplementId: 1, nb: 2, tarif: 25 }] })
+        .expect(200);
+
+      expect(t.prisma.supplement.findMany).not.toHaveBeenCalled();
+      expect(t.prisma.supplementOnReservation.create).toHaveBeenCalledWith({
+        data: { reservationId: 1, supplementId: 1, nb: 2, tarif: 25 },
+      });
+    });
+
+    it('refuse un supplément inconnu sans modifier la réservation', async () => {
+      t.prisma.supplement.findMany.mockResolvedValueOnce([]);
+      await t
+        .http()
+        .patch('/reservations/1')
+        .set(t.auth)
+        .send({ supplements: [{ supplementId: 99, nb: 1 }] })
+        .expect(400);
+
+      expect(t.prisma.reservation.update).not.toHaveBeenCalled();
+      expect(t.prisma.supplementOnReservation.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('refuse un prix de supplément négatif ou décimal', async () => {
+      for (const tarif of [-1, 12.5]) {
+        await t
+          .http()
+          .patch('/reservations/1')
+          .set(t.auth)
+          .send({ supplements: [{ supplementId: 1, nb: 1, tarif }] })
+          .expect(400);
+      }
     });
 
     it('accepte un événement sans date, lieu ni lien (null)', async () => {

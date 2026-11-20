@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsInt, IsNotEmpty, IsString, MaxLength, Min } from 'class-validator'
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 
 export class NbPersonneDto {
 
@@ -22,9 +22,10 @@ export class NbPersonneDto {
 
 export class SupplementLineDto {
 
-  constructor(supplementId: number, nb: number) {
+  constructor(supplementId: number, nb: number, tarif?: number) {
     this.supplementId = supplementId;
     this.nb = nb;
+    this.tarif = tarif;
   }
 
   @ApiProperty({ description: 'Identifiant du supplément' })
@@ -35,6 +36,12 @@ export class SupplementLineDto {
   @IsInt()
   @Min(1)
   readonly nb: number
+
+  @ApiProperty({ description: 'Prix unitaire pour cette réservation (par défaut : prix actuel du supplément)', required: false })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  readonly tarif?: number
 }
 
 /** Copie en objets simples, pour le champ JSON `nbPersonne` de Prisma. */

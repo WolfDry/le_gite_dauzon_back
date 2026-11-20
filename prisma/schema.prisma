@@ -95,6 +95,8 @@ model SupplementOnReservation {
   supplement    Supplement  @relation(fields: [supplementId], references: [id])
   supplementId  Int
   nb            Int
+  /// Prix unitaire appliqué à cette réservation (copié du catalogue à l'ajout, modifiable ensuite).
+  tarif         Int
 
   @@id([reservationId, supplementId])
 }
