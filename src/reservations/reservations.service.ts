@@ -123,8 +123,17 @@ export class ReservationsService {
   async update(id: number, dto: Omit<UpdateReservationDto, 'supplements'>) {
     const current = await this.prisma.reservation.findUniqueOrThrow({
       where: { id },
-      select: { statut: true, clientId: true, tarif: true },
+      select: { statut: true, clientId: true, tarif: true, debut: true, fin: true },
     });
+
+    // Le DTO ne compare debut et fin que s'ils sont envoyés ensemble : on complète avec les dates enregistrées.
+    if (dto.debut || dto.fin) {
+      const debut = dto.debut ?? current.debut;
+      const fin = dto.fin ?? current.fin;
+      if (debut instanceof Date && fin instanceof Date && fin.getTime() <= debut.getTime()) {
+        throw new BadRequestException(['fin doit être postérieure à debut']);
+      }
+    }
 
     const connectId = typeof dto.clientId === 'number' ? dto.clientId : undefined;
     const createClient = connectId === undefined ? dto.newClient : undefined;

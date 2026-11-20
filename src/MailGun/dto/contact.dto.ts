@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { Equals, IsEmail, IsNotEmpty, IsString, MaxLength, ValidateNested } from 'class-validator'
+import { AntiBotDto } from 'src/common/anti-bot'
 
 export class ContactContentDto {
 
@@ -28,9 +29,10 @@ export class ContactContentDto {
   readonly message: string
 }
 
-export class ContactDto {
+export class ContactDto extends AntiBotDto {
 
   constructor(subject: 'autre', content: ContactContentDto) {
+    super();
     this.subject = subject;
     this.content = content;
   }

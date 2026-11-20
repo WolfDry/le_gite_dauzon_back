@@ -3,6 +3,8 @@ import * as formData from 'form-data'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+export type MailSubject = 'reservation' | 'commentaire' | 'autre'
+
 type Content = {
   name?: string
   email: string
@@ -57,7 +59,7 @@ export class MailGunsService {
     }
   }
 
-  sendMail(subject: string, content?: Content) {
+  sendMail(subject: MailSubject, content?: Content) {
 
     let data = {
       subject: '',
@@ -113,7 +115,8 @@ export class MailGunsService {
         }
         break
       default:
-        break
+        // Jamais d'e-mail vide : un sujet inconnu est une erreur de programmation.
+        throw new Error(`Sujet de mail inconnu : ${String(subject)}`)
     }
 
     return this.mg.messages.create(this.domain, {

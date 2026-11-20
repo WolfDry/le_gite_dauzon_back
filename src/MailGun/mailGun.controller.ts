@@ -3,6 +3,7 @@ import { MailGunsService } from 'src/MailGun/mailGun.service'
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Public } from 'src/auth/public.decorator'
 import { ThrottlePublicWrite } from 'src/common/throttle'
+import { ProtectFromBots } from 'src/common/anti-bot'
 import { ContactDto } from './dto/contact.dto'
 
 @ApiTags('mailgun')
@@ -12,6 +13,7 @@ export class MailGunController {
 
   @Public()
   @ThrottlePublicWrite()
+  @ProtectFromBots()
   @Post()
   @ApiOperation({ summary: "Send the contact form to the owners" })
   @ApiBody({ type: ContactDto })

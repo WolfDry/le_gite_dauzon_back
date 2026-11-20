@@ -8,6 +8,7 @@ import { MailGunsService } from 'src/MailGun/mailGun.service';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser, Public } from 'src/auth/public.decorator';
 import { ThrottlePublicWrite } from 'src/common/throttle';
+import { ProtectFromBots } from 'src/common/anti-bot';
 
 @ApiTags('commentaires')
 @ApiBearerAuth()
@@ -19,6 +20,7 @@ export class CommentairesController {
 
   @Public()
   @ThrottlePublicWrite()
+  @ProtectFromBots()
   @Post()
   @ApiOperation({ summary: "Create a comment" })
   @ApiBody({ type: CreateCommentaireDto })

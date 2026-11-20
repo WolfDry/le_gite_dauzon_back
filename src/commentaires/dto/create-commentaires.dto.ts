@@ -1,10 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsBoolean, IsDate, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { AntiBotDto } from "src/common/anti-bot";
 
-export class CreateCommentaireDto {
+export class CreateCommentaireDto extends AntiBotDto {
 
   constructor(commentaire: string, name: string, note: number, verif?: boolean, created?: Date) {
+    super();
     this.commentaire = commentaire;
     this.name = name;
     this.note = note;

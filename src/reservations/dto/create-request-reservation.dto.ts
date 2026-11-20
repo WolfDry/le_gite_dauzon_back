@@ -2,13 +2,15 @@ import { ApiProperty } from '@nestjs/swagger'
 import { Transform, Type } from 'class-transformer'
 import { ArrayMaxSize, IsArray, IsDate, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator'
 import { HasAtLeastOnePerson, IsAfter } from 'src/common/validation'
+import { AntiBotDto } from 'src/common/anti-bot'
 import { NbPersonneDto } from './nb-personne.dto'
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value)
 
-export class CreateRequestReservationDto {
+export class CreateRequestReservationDto extends AntiBotDto {
 
   constructor(debut: Date, fin: Date, nbPersonne: NbPersonneDto[], nom: string, email: string, phone: string, message?: string) {
+    super();
     this.debut = debut;
     this.fin = fin;
     this.nbPersonne = nbPersonne;

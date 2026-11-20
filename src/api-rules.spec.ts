@@ -475,6 +475,106 @@ describe("Règles de l'API", () => {
     });
   });
 
+  describe('dates modifiées séparément (admin)', () => {
+    const STORED = { statut: 'DEMANDE', clientId: null, tarif: null, debut: new Date('2026-07-04'), fin: new Date('2026-07-11') };
+
+    it.each([
+      ['un départ seul avant l’arrivée enregistrée', { fin: '2026-07-01' }],
+      ['une arrivée seule après le départ enregistré', { debut: '2026-07-12' }],
+      ['une arrivée seule le jour du départ enregistré', { debut: '2026-07-11' }],
+    ])('refuse %s (400)', async (_label, body) => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(STORED);
+      await t.http().patch('/reservations/1').set(t.auth).send(body).expect(400);
+      expect(t.prisma.reservation.update).not.toHaveBeenCalled();
+    });
+
+    it('accepte un départ seul après l’arrivée enregistrée', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(STORED);
+      await t.http().patch('/reservations/1').set(t.auth).send({ fin: '2026-07-18' }).expect(200);
+    });
+  });
+
+  describe('protection anti-robot des formulaires publics', () => {
+    const CONTACT = { subject: 'autre', content: { name: 'Jean', email: 'jean@example.com', message: 'Bonjour' } };
+    const COMMENT = { name: 'Jean', commentaire: 'Super', note: 5 };
+    let fetchMock: jest.SpyInstance;
+
+    const cloudflare = (body: object) =>
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(body), { status: 200 }));
+
+    beforeEach(() => {
+      fetchMock = jest.spyOn(global, 'fetch').mockRejectedValue(new Error('fetch non simulé'));
+    });
+
+    afterEach(() => {
+      fetchMock.mockRestore();
+      delete process.env.TURNSTILE_SECRET_KEY;
+    });
+
+    describe('champ piège', () => {
+      it('répond comme un succès sans rien enregistrer ni envoyer', async () => {
+        const res = await t.http().post('/reservations/request').send({ ...REQUEST, website: 'https://spam.example' }).expect(201);
+        expect(res.body).toEqual({ id: 0 });
+        await t.http().post('/commentaires').send({ ...COMMENT, website: 'spam' }).expect(201);
+        await t.http().post('/mailgun').send({ ...CONTACT, website: 'spam' }).expect(201);
+
+        expect(t.prisma.reservation.create).not.toHaveBeenCalled();
+        expect(t.prisma.commentaire.create).not.toHaveBeenCalled();
+        expect(t.mail.sendMail).not.toHaveBeenCalled();
+      });
+
+      it("accepte le champ vide et ne l'enregistre pas", async () => {
+        await t.http().post('/commentaires').send({ ...COMMENT, website: '', turnstileToken: 'x' }).expect(201);
+        expect(t.prisma.commentaire.create).toHaveBeenCalledWith({ data: { name: 'Jean', commentaire: 'Super', note: 5 } });
+      });
+    });
+
+    describe('Cloudflare Turnstile', () => {
+      it("n'appelle pas Cloudflare sans TURNSTILE_SECRET_KEY", async () => {
+        await t.http().post('/mailgun').send(CONTACT).expect(201);
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      it('refuse une requête sans jeton (403)', async () => {
+        process.env.TURNSTILE_SECRET_KEY = 'secret-turnstile';
+        await t.http().post('/reservations/request').send(REQUEST).expect(403);
+        expect(t.prisma.reservation.create).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      it('refuse un jeton rejeté par Cloudflare (403)', async () => {
+        process.env.TURNSTILE_SECRET_KEY = 'secret-turnstile';
+        cloudflare({ success: false, 'error-codes': ['invalid-input-response'] });
+        await t.http().post('/mailgun').send({ ...CONTACT, turnstileToken: 'faux' }).expect(403);
+        expect(t.mail.sendMail).not.toHaveBeenCalled();
+      });
+
+      it('accepte un jeton valide, vérifié avec la clé secrète', async () => {
+        process.env.TURNSTILE_SECRET_KEY = 'secret-turnstile';
+        cloudflare({ success: true });
+        await t.http().post('/reservations/request').send({ ...REQUEST, turnstileToken: 'bon-jeton' }).expect(201);
+
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        expect(JSON.parse(init.body)).toMatchObject({ secret: 'secret-turnstile', response: 'bon-jeton' });
+        expect(t.prisma.reservation.create.mock.calls[0][0].data).not.toHaveProperty('turnstileToken');
+      });
+
+      it('laisse passer la demande si Cloudflare ne répond pas', async () => {
+        process.env.TURNSTILE_SECRET_KEY = 'secret-turnstile';
+        await t.http().post('/reservations/request').send({ ...REQUEST, turnstileToken: 'jeton' }).expect(201);
+        expect(t.prisma.reservation.create).toHaveBeenCalledTimes(1);
+      });
+
+      it("ne contrôle pas l'admin connecté", async () => {
+        process.env.TURNSTILE_SECRET_KEY = 'secret-turnstile';
+        await t.http().post('/commentaires').set(t.auth).send({ ...COMMENT, website: 'rempli par erreur' }).expect(201);
+        expect(t.prisma.commentaire.create).toHaveBeenCalledTimes(1);
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   describe('erreurs de base de données', () => {
     it('répond 404 pour un élément introuvable', async () => {
       t.prisma.client.findUniqueOrThrow.mockRejectedValueOnce(prismaError('P2025'));

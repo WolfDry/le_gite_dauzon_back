@@ -8,6 +8,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto'
 import { Public } from 'src/auth/public.decorator'
 import { ThrottlePublicWrite } from 'src/common/throttle'
+import { ProtectFromBots } from 'src/common/anti-bot'
 import { toNbPersonneJson } from './dto/nb-personne.dto'
 
 @ApiTags('reservations')
@@ -62,6 +63,7 @@ export class ReservationsController {
 
   @Public()
   @ThrottlePublicWrite()
+  @ProtectFromBots({ id: 0 })
   @Post('/request')
   @ApiOperation({ summary: "Create a reservation request (public, always DEMANDE)" })
   @ApiBody({ type: CreateRequestReservationDto })
