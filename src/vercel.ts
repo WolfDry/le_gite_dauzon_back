@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 import { createApp } from './app.factory'
 
-type Handler = (req: IncomingMessage, res: ServerResponse) => void
+type Handler = (req: IncomingMessage, res: ServerResponse) => unknown
 
 // L'application est initialisée une seule fois par instance de fonction,
 // puis réutilisée par les requêtes suivantes (démarrage à froid uniquement).

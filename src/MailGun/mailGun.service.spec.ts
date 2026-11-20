@@ -15,12 +15,12 @@ describe('MailGunsService', () => {
     expect(create).not.toHaveBeenCalled()
   })
 
-  it('échappe le HTML saisi dans le formulaire de contact', () => {
+  it('échappe le HTML saisi dans le formulaire de contact', async () => {
     const service = new MailGunsService(config)
     const create = jest.fn()
     ;(service as unknown as { mg: { messages: { create: jest.Mock } } }).mg = { messages: { create } }
 
-    service.sendMail('autre', { name: '<b>Jean</b>', email: 'jean@example.com', message: '<a href="x">clic</a>' })
+    await service.sendMail('autre', { name: '<b>Jean</b>', email: 'jean@example.com', message: '<a href="x">clic</a>' })
     const html: string = create.mock.calls[0][1].html
     expect(html).not.toContain('<a href')
     expect(html).toContain('&lt;b&gt;Jean&lt;/b&gt;')

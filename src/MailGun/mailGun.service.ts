@@ -18,7 +18,7 @@ type Content = {
   }[]
 }
 
-const escapeHtml = (value: unknown) =>
+const escapeHtml = (value?: string | null) =>
   String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -33,9 +33,9 @@ const paragraphs = (text: string) => escapeHtml(text).replace(/\r?\n/g, '<br>')
 
 @Injectable()
 export class MailGunsService {
-  private mg
-  private domain
-  private emailReception
+  private readonly mg: ReturnType<Mailgun['client']>
+  private readonly domain: string
+  private readonly emailReception: string
 
   constructor(private configService: ConfigService) {
     const mailgun = new Mailgun(formData)
@@ -44,19 +44,21 @@ export class MailGunsService {
     if (!key) {
       throw new Error('MAILGUN_KEY is not defined in environment variables')
     }
-    this.emailReception = this.configService.get<string>('MAILGUN_EMAIL_RECEPTION')
-    if (!this.emailReception) {
+    const emailReception = this.configService.get<string>('MAILGUN_EMAIL_RECEPTION')
+    if (!emailReception) {
       throw new Error('MAILGUN_EMAIL_RECEPTION is not defined in environment variables')
     }
+    this.emailReception = emailReception
 
     this.mg = mailgun.client({
       username: 'api',
       key,
     })
-    this.domain = this.configService.get<string>('MAILGUN_DOMAIN')
-    if (!this.domain) {
+    const domain = this.configService.get<string>('MAILGUN_DOMAIN')
+    if (!domain) {
       throw new Error('MAILGUN_DOMAIN is not defined in environment variables')
     }
+    this.domain = domain
   }
 
   sendMail(subject: MailSubject, content?: Content) {
@@ -93,7 +95,7 @@ export class MailGunsService {
           <p>Personnes : ${escapeHtml(personnes)}</p>
           <p>Dates : ${escapeHtml(dates)}</p>
           ${content?.message ? `<p>Message :<br>${paragraphs(content.message)}</p>` : ''}
-          <p>La demande est enregistrée dans l\'admin, rubrique Réservations.</p>`
+          <p>La demande est enregistrée dans l'admin, rubrique Réservations.</p>`
         }
         break
       }

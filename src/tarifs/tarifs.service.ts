@@ -6,12 +6,8 @@ import { Prisma } from '@prisma/client';
 export class TarifsService {
   constructor (private prisma: PrismaService) { }
 
-  async create(data: Prisma.TarifCreateInput) {
-    try {
-      return await this.prisma.tarif.create({ data });
-    } catch (error) {
-      throw error;
-    }
+  create(data: Prisma.TarifCreateInput) {
+    return this.prisma.tarif.create({ data });
   }
 
   findAll() {

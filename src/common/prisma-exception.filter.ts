@@ -29,7 +29,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         return new NotFoundException('Élément introuvable')
       case 'P2002': {
         const target = exception.meta?.target
-        const fields = Array.isArray(target) ? target.join(', ') : target
+        const fields = Array.isArray(target) ? target.join(', ') : typeof target === 'string' ? target : undefined
         return new ConflictException(
           fields ? `Cette valeur est déjà utilisée (${fields})` : 'Cette valeur est déjà utilisée',
         )

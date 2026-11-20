@@ -6,12 +6,8 @@ import { Prisma } from '@prisma/client';
 export class CommentairesService {
   constructor(private prisma: PrismaService) { }
 
-  async create(data: Prisma.CommentaireCreateInput) {
-    try {
-      return await this.prisma.commentaire.create({ data });
-    } catch (error) {
-      throw error;
-    }
+  create(data: Prisma.CommentaireCreateInput) {
+    return this.prisma.commentaire.create({ data });
   }
 
   findAll({ onlyVerified }: { onlyVerified: boolean }) {

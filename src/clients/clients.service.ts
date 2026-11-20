@@ -6,12 +6,8 @@ import { Prisma } from '@prisma/client';
 export class ClientsService {
   constructor(private prisma: PrismaService) { }
 
-  async create(data: Prisma.ClientCreateInput) {
-    try {
-      return await this.prisma.client.create({ data });
-    } catch (error) {
-      throw error;
-    }
+  create(data: Prisma.ClientCreateInput) {
+    return this.prisma.client.create({ data });
   }
 
   findAll() {

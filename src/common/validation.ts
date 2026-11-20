@@ -17,7 +17,7 @@ export function IsAfter(property: string, options?: ValidationOptions) {
       options: { message: `${propertyName} doit être postérieure à ${property}`, ...options },
       validator: {
         validate(value: unknown, args: ValidationArguments) {
-          const other = (args.object as Record<string, unknown>)[args.constraints[0]]
+          const other = (args.object as Record<string, unknown>)[args.constraints[0] as string]
           if (!(value instanceof Date) || !(other instanceof Date)) return true
           return value.getTime() > other.getTime()
         },
@@ -36,7 +36,7 @@ export function HasAtLeastOnePerson(options?: ValidationOptions) {
       validator: {
         validate(value: unknown) {
           if (!Array.isArray(value)) return false
-          return value.reduce((total, item) => total + (typeof item?.nb === 'number' ? item.nb : 0), 0) > 0
+          return value.reduce<number>((total, item: { nb?: unknown } | null) => total + (typeof item?.nb === 'number' ? item.nb : 0), 0) > 0
         },
       },
     })
