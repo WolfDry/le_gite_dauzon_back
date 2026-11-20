@@ -13,9 +13,8 @@ export class CommentairesService {
   findAll({ onlyVerified }: { onlyVerified: boolean }) {
     return this.prisma.commentaire.findMany({
       where: onlyVerified ? { verif: true } : undefined,
-      orderBy: {
-        created: 'desc',
-      }
+      // `created` est une date sans heure : l'id départage les commentaires du même jour.
+      orderBy: [{ created: 'desc' }, { id: 'desc' }],
     });
   }
 

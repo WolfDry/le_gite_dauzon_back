@@ -1,5 +1,4 @@
 import Mailgun from 'mailgun.js'
-import * as formData from 'form-data'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
@@ -38,7 +37,7 @@ export class MailGunsService {
   private readonly emailReception: string
 
   constructor(private configService: ConfigService) {
-    const mailgun = new Mailgun(formData)
+    const mailgun = new Mailgun(FormData)
 
     const key = this.configService.get<string>('MAILGUN_KEY')
     if (!key) {

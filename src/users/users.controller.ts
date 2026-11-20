@@ -5,20 +5,14 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Prisma } from '@prisma/client';
 import { ApiBody, ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { AuthService } from '../auth/auth.service';
 import { AuthUser, CurrentUser, Public } from '../auth/public.decorator';
 import { hashPassword } from '../auth/password';
-import { LoginDto } from '../auth/dto/login.dto';
-import { ThrottleLogin } from '../common/throttle';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(
-    private readonly usersService: UsersService,
-    private readonly authService: AuthService,
-  ) { }
+  constructor(private readonly usersService: UsersService) { }
 
   @Public()
   @Post()
@@ -28,17 +22,6 @@ export class UsersController {
     const { email, password } = createUserDto;
     const payload: Prisma.UserCreateInput = { email, password: await hashPassword(password) }
     return this.usersService.create(payload);
-  }
-
-  @Public()
-  @ThrottleLogin()
-  @Post('login')
-  @ApiOperation({ summary: "Login & get JWT" })
-  @ApiBody({ type: LoginDto })
-  async login(@Body() body: LoginDto) {
-    const user = await this.authService.validateUser(body.email, body.password);
-    const access_token = this.authService.signToken({ id: user.id, email: user.email });
-    return { user, access_token };
   }
 
   @Get()
