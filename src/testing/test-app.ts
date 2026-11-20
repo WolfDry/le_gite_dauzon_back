@@ -22,7 +22,6 @@ const model = () => ({
 
 const createPrismaMock = () => ({
   onModuleInit: jest.fn(),
-  $queryRaw: jest.fn().mockResolvedValue([1]),
   user: model(),
   client: model(),
   reservation: model(),

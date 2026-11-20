@@ -2,7 +2,6 @@ import { Controller, Get, Headers, Logger, UnauthorizedException } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { timingSafeEqual } from 'crypto';
-import { PrismaService } from '../prisma.service';
 import { Public } from '../auth/public.decorator';
 import { ReservationsService } from '../reservations/reservations.service';
 
@@ -12,21 +11,9 @@ export class CronController {
   private readonly logger = new Logger(CronController.name);
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly reservationsService: ReservationsService,
     private readonly config: ConfigService,
   ) { }
-
-  @Get()
-  async check() {
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-
-      return { status: 'ok' };
-    } catch (err) {
-      return { status: 'error', message: err.message };
-    }
-  }
 
   @Get('purge-demandes')
   @ApiExcludeEndpoint()
