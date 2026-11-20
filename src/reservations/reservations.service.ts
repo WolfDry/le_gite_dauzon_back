@@ -23,8 +23,13 @@ const DAY_MS = 86_400_000;
 export class ReservationsService {
   constructor(private prisma: PrismaService) { }
 
-  create(data: Prisma.ReservationCreateInput) {
-    return this.prisma.reservation.create({ data });
+  create(data: Omit<Prisma.ReservationCreateInput, 'supplements'>, supplements: PricedSupplementLine[] = []) {
+    return this.prisma.reservation.create({
+      data: {
+        ...data,
+        supplements: supplements.length ? { create: this.toSupplementsCreate(supplements) } : undefined,
+      },
+    });
   }
 
   createRequest(dto: CreateRequestReservationDto) {
@@ -66,23 +71,17 @@ export class ReservationsService {
     }));
   }
 
-  async addSupplementToReservation(reservationId: number, { supplementId, nb, tarif }: PricedSupplementLine) {
-    return this.prisma.supplementOnReservation.create({
-      data: {
-        reservationId,
-        supplementId,
-        nb,
-        tarif
-      }
-    })
+  /**
+   * Lignes de suppléments au format d'une écriture imbriquée Prisma : la réservation et ses suppléments
+   * sont enregistrés par une seule requête, donc tout ou rien.
+   */
+  private toSupplementsCreate(lines: PricedSupplementLine[]): Prisma.SupplementOnReservationCreateWithoutReservationInput[] {
+    return lines.map(({ supplementId, nb, tarif }) => ({
+      supplement: { connect: { id: supplementId } },
+      nb,
+      tarif,
+    }));
   }
-
-  async clearSupplements(reservationId: number) {
-    return this.prisma.supplementOnReservation.deleteMany({
-      where: { reservationId }
-    })
-  }
-
 
   findDisponibilites(depuis: Date) {
     return this.prisma.reservation.findMany({
@@ -120,7 +119,11 @@ export class ReservationsService {
     });
   }
 
-  async update(id: number, dto: Omit<UpdateReservationDto, 'supplements'>) {
+  /**
+   * `supplements` absent : les suppléments ne changent pas. Présent (même vide) : ils remplacent les anciens,
+   * dans la même requête que la modification de la réservation.
+   */
+  async update(id: number, dto: Omit<UpdateReservationDto, 'supplements'>, supplements?: PricedSupplementLine[]) {
     const current = await this.prisma.reservation.findUniqueOrThrow({
       where: { id },
       select: { statut: true, clientId: true, tarif: true, debut: true, fin: true },
@@ -169,6 +172,7 @@ export class ReservationsService {
       tarif: dto.tarif,
       nbPersonne: dto.nbPersonne ? toNbPersonneJson(dto.nbPersonne) : undefined,
       client: Object.keys(client).length > 0 ? client : undefined,
+      supplements: supplements ? { deleteMany: {}, create: this.toSupplementsCreate(supplements) } : undefined,
     };
     if (dto.statut && dto.statut !== current.statut) {
       data.statut = dto.statut;

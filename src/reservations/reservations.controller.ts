@@ -30,7 +30,7 @@ export class ReservationsController {
       email: email as string,
       telephone: telephone as string,
     }
-    const payload: Prisma.ReservationCreateInput = {
+    const payload: Omit<Prisma.ReservationCreateInput, 'supplements'> = {
       tarif,
       debut,
       fin,
@@ -48,17 +48,7 @@ export class ReservationsController {
     }
 
     const supplements = await this.reservationsService.priceSupplements(createReservationDto.supplements ?? [])
-    const result = await this.reservationsService.create(payload)
-
-    if (supplements.length) {
-      await Promise.all(
-        supplements.map(supplement =>
-          this.reservationsService.addSupplementToReservation(result.id, supplement)
-        )
-      )
-    }
-
-    return result
+    return this.reservationsService.create(payload, supplements)
   }
 
   @Public()
@@ -112,23 +102,9 @@ export class ReservationsController {
   @ApiOperation({ summary: "Update a reservation" })
   @ApiBody({ type: UpdateReservationDto })
   async update(@Param('id', ParseIntPipe) id: number, @Body() updateReservationDto: UpdateReservationDto) {
-
     const { supplements: lines, ...rest } = updateReservationDto
     const supplements = lines && await this.reservationsService.priceSupplements(lines)
-    const updatedReservation = await this.reservationsService.update(id, rest)
-
-    if (supplements) {
-      await this.reservationsService.clearSupplements(id)
-
-      await Promise.all(
-        supplements.map(supplement =>
-          this.reservationsService.addSupplementToReservation(id, supplement)
-        )
-      )
-    }
-
-    return updatedReservation
-
+    return this.reservationsService.update(id, rest, supplements)
   }
 
   @Delete(':id')

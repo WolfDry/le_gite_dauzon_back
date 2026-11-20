@@ -398,11 +398,42 @@ describe("Règles de l'API", () => {
           fin: new Date(body.fin),
           tarif: 650,
           nbPersonne: [{ label: 'Adultes', nb: 2 }],
+          supplements: {
+            deleteMany: {},
+            create: [{ supplement: { connect: { id: 1 } }, nb: 1, tarif: 40 }],
+          },
         }),
       });
-      expect(t.prisma.supplementOnReservation.create).toHaveBeenCalledWith({
-        data: { reservationId: 1, supplementId: 1, nb: 1, tarif: 40 },
+    });
+
+    it('enregistre la réservation et ses suppléments en une seule écriture (tout ou rien)', async () => {
+      await t
+        .http()
+        .post('/reservations')
+        .set(t.auth)
+        .send({
+          debut: '2026-08-01T00:00:00.000Z',
+          fin: '2026-08-08T00:00:00.000Z',
+          tarif: 650,
+          statut: 'CONFIRMEE',
+          nbPersonne: [{ label: 'Adultes', nb: 2 }],
+          clientId: 3,
+          supplements: [{ supplementId: 1, nb: 2, tarif: 25 }],
+        })
+        .expect(201);
+
+      expect(t.prisma.reservation.create).toHaveBeenCalledTimes(1);
+      expect(t.prisma.reservation.create.mock.calls[0][0].data.supplements).toEqual({
+        create: [{ supplement: { connect: { id: 1 } }, nb: 2, tarif: 25 }],
       });
+      expect(t.prisma.supplementOnReservation.create).not.toHaveBeenCalled();
+    });
+
+    it('ne touche pas aux suppléments quand la modification ne les envoie pas', async () => {
+      await t.http().patch('/reservations/1').set(t.auth).send({ tarif: 700 }).expect(200);
+
+      expect(t.prisma.reservation.update.mock.calls[0][0].data.supplements).toBeUndefined();
+      expect(t.prisma.supplementOnReservation.deleteMany).not.toHaveBeenCalled();
     });
 
     it('enregistre le prix du supplément choisi pour la réservation, sans relire le catalogue', async () => {
@@ -414,9 +445,13 @@ describe("Règles de l'API", () => {
         .expect(200);
 
       expect(t.prisma.supplement.findMany).not.toHaveBeenCalled();
-      expect(t.prisma.supplementOnReservation.create).toHaveBeenCalledWith({
-        data: { reservationId: 1, supplementId: 1, nb: 2, tarif: 25 },
+      // Anciens suppléments retirés et nouveaux ajoutés dans la même requête que la réservation.
+      expect(t.prisma.reservation.update.mock.calls[0][0].data.supplements).toEqual({
+        deleteMany: {},
+        create: [{ supplement: { connect: { id: 1 } }, nb: 2, tarif: 25 }],
       });
+      expect(t.prisma.supplementOnReservation.deleteMany).not.toHaveBeenCalled();
+      expect(t.prisma.supplementOnReservation.create).not.toHaveBeenCalled();
     });
 
     it('refuse un supplément inconnu sans modifier la réservation', async () => {
