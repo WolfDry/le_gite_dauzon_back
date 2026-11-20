@@ -5,7 +5,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Prisma } from '@prisma/client';
 import { ApiBody, ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { AuthUser, CurrentUser, Public } from '../auth/public.decorator';
+import { AuthUser, CurrentUser } from '../auth/public.decorator';
 import { hashPassword } from '../auth/password';
 
 @ApiTags('users')
@@ -14,9 +14,8 @@ import { hashPassword } from '../auth/password';
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
-  @Public()
   @Post()
-  @ApiOperation({ summary: "Create a user" })
+  @ApiOperation({ summary: "Create a user (admin only)" })
   @ApiBody({ type: CreateUserDto })
   async create(@Body() createUserDto: CreateUserDto) {
     const { email, password } = createUserDto;
