@@ -13,10 +13,8 @@ const prismaError = (code: string, meta?: Record<string, unknown>) =>
 const REQUEST = {
   debut: '2026-07-04',
   fin: '2026-07-11',
-  nbPersonne: [
-    { label: 'Adultes', nb: 2 },
-    { label: 'Enfants', nb: 0 },
-  ],
+  adultes: 2,
+  enfants: 1,
   nom: 'Marie Dupont',
   email: 'a@b.fr',
   phone: '06 12 34 56 78',
@@ -69,7 +67,9 @@ describe("Règles de l'API", () => {
         data: {
           debut: new Date('2026-07-04'),
           fin: new Date('2026-07-11'),
-          nbPersonne: REQUEST.nbPersonne,
+          adultes: 2,
+          enfants: 1,
+          animaux: 0,
           statut: 'DEMANDE',
           source: 'SITE',
           demandeurNom: 'Marie Dupont',
@@ -80,7 +80,7 @@ describe("Règles de l'API", () => {
       });
       expect(t.mail.sendMail).toHaveBeenCalledWith(
         'reservation',
-        expect.objectContaining({ name: 'Marie Dupont', email: 'a@b.fr', message: 'Arrivée tardive' }),
+        expect.objectContaining({ name: 'Marie Dupont', email: 'a@b.fr', message: 'Arrivée tardive', adultes: 2, enfants: 1 }),
       );
     });
 
@@ -95,6 +95,28 @@ describe("Règles de l'API", () => {
       expect(t.prisma.reservation.create.mock.calls[0][0].data.message).toBeNull();
     });
 
+    it('ajoute le supplément facturé par animal avec le nombre d’animaux indiqué', async () => {
+      t.prisma.supplement.findFirst.mockResolvedValueOnce({ id: 5, tarif: 8.5 });
+      await t.http().post('/reservations/request').send({ ...REQUEST, animaux: 2 }).expect(201);
+
+      expect(t.prisma.supplement.findFirst).toHaveBeenCalledWith({ where: { parAnimal: true }, select: { id: true, tarif: true } });
+      const data = t.prisma.reservation.create.mock.calls[0][0].data;
+      expect(data.animaux).toBe(2);
+      expect(data.supplements).toEqual({ create: [{ supplement: { connect: { id: 5 } }, nb: 2, tarif: 8.5 }] });
+    });
+
+    it('enregistre la demande sans supplément si aucun supplément n’est facturé par animal', async () => {
+      await t.http().post('/reservations/request').send({ ...REQUEST, animaux: 1 }).expect(201);
+      const data = t.prisma.reservation.create.mock.calls[0][0].data;
+      expect(data.animaux).toBe(1);
+      expect(data.supplements).toBeUndefined();
+    });
+
+    it('ne cherche pas de supplément sans animal', async () => {
+      await t.http().post('/reservations/request').send(REQUEST).expect(201);
+      expect(t.prisma.supplement.findFirst).not.toHaveBeenCalled();
+    });
+
     it.each([
       ['un départ avant l’arrivée', { fin: '2026-07-01' }],
       ['un départ le jour de l’arrivée', { fin: '2026-07-04' }],
@@ -104,8 +126,12 @@ describe("Règles de l'API", () => {
       ['un nom absent', { nom: undefined }],
       ['un nom fait d’espaces', { nom: '   ' }],
       ['un message trop long', { message: 'x'.repeat(2001) }],
-      ['zéro personne', { nbPersonne: [{ label: 'Adultes', nb: 0 }] }],
-      ['un nombre de personnes négatif', { nbPersonne: [{ label: 'Adultes', nb: -1 }] }],
+      ['aucun adulte', { adultes: 0, enfants: 2 }],
+      ['un nombre d’adultes absent', { adultes: undefined }],
+      ['un nombre d’enfants négatif', { enfants: -1 }],
+      ['un nombre d’animaux décimal', { animaux: 1.5 }],
+      ['un nombre de voyageurs excessif', { adultes: 51 }],
+      ['l’ancien format nbPersonne', { adultes: undefined, nbPersonne: [{ label: 'Adultes', nb: 2 }] }],
     ])('refuse %s (400)', async (_label, override) => {
       await t
         .http()
@@ -125,7 +151,7 @@ describe("Règles de l'API", () => {
         .http()
         .post('/reservations')
         .set(t.auth)
-        .send({ tarif: 500, debut: '2026-08-01', fin: '2026-08-08', nbPersonne: [], clientId: 1 })
+        .send({ tarif: 500, debut: '2026-08-01', fin: '2026-08-08', clientId: 1 })
         .expect(201);
       expect(t.prisma.reservation.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ statut: 'CONFIRMEE', source: 'ADMIN' }),
@@ -353,7 +379,7 @@ describe("Règles de l'API", () => {
         .http()
         .post('/reservations')
         .set(t.auth)
-        .send({ tarif: 0, debut: '2026-08-01', fin: '2026-08-08', nbPersonne: [], clientId: 1, statut: 'CONFIRMEE' })
+        .send({ tarif: 0, debut: '2026-08-01', fin: '2026-08-08', clientId: 1, statut: 'CONFIRMEE' })
         .expect(201);
     });
 
@@ -362,7 +388,7 @@ describe("Règles de l'API", () => {
         .http()
         .post('/reservations')
         .set(t.auth)
-        .send({ tarif: 500, debut: '2026-08-01', fin: '2026-08-08', nbPersonne: [], clientId: null, email: '' })
+        .send({ tarif: 500, debut: '2026-08-01', fin: '2026-08-08', clientId: null, email: '' })
         .expect(400);
     });
 
@@ -378,7 +404,8 @@ describe("Règles de l'API", () => {
         fin: '2026-08-08T00:00:00.000Z',
         tarif: 650,
         statut: 'CONFIRMEE',
-        nbPersonne: [{ label: 'Adultes', nb: 2 }],
+        adultes: 2,
+        enfants: 1,
         clientId: 3,
         email: '',
         nom: '',
@@ -397,7 +424,9 @@ describe("Règles de l'API", () => {
           debut: new Date(body.debut),
           fin: new Date(body.fin),
           tarif: 650,
-          nbPersonne: [{ label: 'Adultes', nb: 2 }],
+          adultes: 2,
+          enfants: 1,
+          animaux: undefined,
           supplements: {
             deleteMany: {},
             create: [{ supplement: { connect: { id: 1 } }, nb: 1, tarif: 40 }],
@@ -416,7 +445,7 @@ describe("Règles de l'API", () => {
           fin: '2026-08-08T00:00:00.000Z',
           tarif: 650,
           statut: 'CONFIRMEE',
-          nbPersonne: [{ label: 'Adultes', nb: 2 }],
+          adultes: 2,
           clientId: 3,
           supplements: [{ supplementId: 1, nb: 2, tarif: 25 }],
         })
@@ -467,8 +496,8 @@ describe("Règles de l'API", () => {
       expect(t.prisma.supplementOnReservation.deleteMany).not.toHaveBeenCalled();
     });
 
-    it('refuse un prix de supplément négatif ou décimal', async () => {
-      for (const tarif of [-1, 12.5]) {
+    it('refuse un prix de supplément négatif ou plus précis que le centime', async () => {
+      for (const tarif of [-1, 12.345]) {
         await t
           .http()
           .patch('/reservations/1')
@@ -476,6 +505,49 @@ describe("Règles de l'API", () => {
           .send({ supplements: [{ supplementId: 1, nb: 1, tarif }] })
           .expect(400);
       }
+    });
+
+    it('accepte les montants en euros avec centimes (tarif, supplément, prix)', async () => {
+      await t
+        .http()
+        .patch('/reservations/1')
+        .set(t.auth)
+        .send({ tarif: 650.5, supplements: [{ supplementId: 1, nb: 1, tarif: 12.5 }] })
+        .expect(200);
+      expect(t.prisma.reservation.update.mock.calls[0][0].data).toEqual(
+        expect.objectContaining({
+          tarif: 650.5,
+          supplements: { deleteMany: {}, create: [{ supplement: { connect: { id: 1 } }, nb: 1, tarif: 12.5 }] },
+        }),
+      );
+
+      await t.http().patch('/supplements/1').set(t.auth).send({ tarif: 9.99 }).expect(200);
+      await t.http().patch('/tarifs/1').set(t.auth).send({ prix: 700.25 }).expect(200);
+      expect(t.prisma.supplement.update.mock.calls[0][0].data).toEqual({ tarif: 9.99 });
+      expect(t.prisma.tarif.update.mock.calls[0][0].data).toEqual({ prix: 700.25 });
+    });
+
+    it('un seul supplément est facturé par animal : en marquer un retire la marque des autres', async () => {
+      await t.http().patch('/supplements/3').set(t.auth).send({ parAnimal: true }).expect(200);
+      expect(t.prisma.supplement.updateMany).toHaveBeenCalledWith({
+        where: { parAnimal: true, id: { not: 3 } },
+        data: { parAnimal: false },
+      });
+      expect(t.prisma.supplement.update).toHaveBeenCalledWith({ where: { id: 3 }, data: { parAnimal: true } });
+
+      await t
+        .http()
+        .post('/supplements')
+        .set(t.auth)
+        .send({ label: 'Animal', tarif: 8, type: 'HEBDOMADAIRE', parAnimal: true })
+        .expect(201);
+      expect(t.prisma.supplement.updateMany).toHaveBeenLastCalledWith({ where: { parAnimal: true }, data: { parAnimal: false } });
+      expect(t.prisma.$transaction).toHaveBeenCalledTimes(2);
+    });
+
+    it('ne touche pas aux autres suppléments sans marque « par animal »', async () => {
+      await t.http().patch('/supplements/3').set(t.auth).send({ tarif: 10, parAnimal: false }).expect(200);
+      expect(t.prisma.supplement.updateMany).not.toHaveBeenCalled();
     });
 
     it('accepte un événement sans date, lieu ni lien (null)', async () => {

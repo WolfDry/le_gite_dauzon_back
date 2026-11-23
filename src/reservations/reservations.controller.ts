@@ -9,7 +9,6 @@ import { CreateRequestReservationDto } from './dto/create-request-reservation.dt
 import { Public } from 'src/auth/public.decorator'
 import { ThrottlePublicWrite } from 'src/common/throttle'
 import { ProtectFromBots } from 'src/common/anti-bot'
-import { toNbPersonneJson } from './dto/nb-personne.dto'
 
 @ApiTags('reservations')
 @ApiBearerAuth()
@@ -23,7 +22,7 @@ export class ReservationsController {
   @ApiOperation({ summary: "Create a reservation" })
   @ApiBody({ type: CreateReservationDto })
   async create(@Body() createReservationDto: CreateReservationDto) {
-    const { tarif, debut, fin, nbPersonne, clientId, email, nom, prenom, telephone, statut } = createReservationDto
+    const { tarif, debut, fin, adultes, enfants, animaux, clientId, email, nom, prenom, telephone, statut } = createReservationDto
     const validatedClient = {
       nom: nom as string,
       prenom: prenom as string,
@@ -34,7 +33,9 @@ export class ReservationsController {
       tarif,
       debut,
       fin,
-      nbPersonne: toNbPersonneJson(nbPersonne),
+      adultes,
+      enfants,
+      animaux,
       statut: statut ?? ReservationStatut.CONFIRMEE,
       source: ReservationSource.ADMIN,
       client: {
@@ -68,7 +69,9 @@ export class ReservationsController {
         message: dto.message,
         debut: dto.debut,
         fin: dto.fin,
-        nbPersonne: dto.nbPersonne,
+        adultes: dto.adultes,
+        enfants: dto.enfants,
+        animaux: dto.animaux,
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)

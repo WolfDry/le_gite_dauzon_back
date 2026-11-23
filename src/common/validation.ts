@@ -1,5 +1,5 @@
 import { ValidationPipe } from '@nestjs/common'
-import { ValidationArguments, ValidationOptions, registerDecorator } from 'class-validator'
+import { IsInt, IsNumber, Max, Min, ValidationArguments, ValidationOptions, registerDecorator } from 'class-validator'
 
 export const createValidationPipe = () =>
   new ValidationPipe({
@@ -26,19 +26,21 @@ export function IsAfter(property: string, options?: ValidationOptions) {
   }
 }
 
-export function HasAtLeastOnePerson(options?: ValidationOptions) {
+/** Montant en euros : nombre positif ou nul, au centime près (0 accepté). */
+export function IsMontant(options?: ValidationOptions) {
   return (object: object, propertyName: string) => {
-    registerDecorator({
-      name: 'hasAtLeastOnePerson',
-      target: object.constructor,
-      propertyName,
-      options: { message: `${propertyName} doit compter au moins une personne`, ...options },
-      validator: {
-        validate(value: unknown) {
-          if (!Array.isArray(value)) return false
-          return value.reduce<number>((total, item: { nb?: unknown } | null) => total + (typeof item?.nb === 'number' ? item.nb : 0), 0) > 0
-        },
-      },
-    })
+    IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 2 }, options)(object, propertyName)
+    Min(0, options)(object, propertyName)
+  }
+}
+
+/** Nombre de voyageurs d'une catégorie (adultes, enfants, animaux). */
+export const MAX_VOYAGEURS = 50
+
+export function IsNbVoyageurs(min = 0, options?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    IsInt(options)(object, propertyName)
+    Min(min, options)(object, propertyName)
+    Max(MAX_VOYAGEURS, options)(object, propertyName)
   }
 }

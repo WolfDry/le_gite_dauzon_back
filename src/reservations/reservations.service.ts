@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma.service';
 import { Prisma, ReservationSource, ReservationStatut } from '@prisma/client';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto';
-import { SupplementLineDto, toNbPersonneJson } from './dto/nb-personne.dto';
+import { SupplementLineDto } from './dto/supplement-line.dto';
 
 export type PricedSupplementLine = { supplementId: number; nb: number; tarif: number };
 
@@ -32,18 +32,34 @@ export class ReservationsService {
     });
   }
 
-  createRequest(dto: CreateRequestReservationDto) {
+  /**
+   * Demande du site, toujours au statut DEMANDE. Si le visiteur indique des animaux, le supplément
+   * facturé par animal (s'il existe) est ajouté avec ce nombre, au prix actuel du catalogue.
+   */
+  async createRequest(dto: CreateRequestReservationDto) {
+    const animaux = dto.animaux ?? 0;
+    const supplementAnimal = animaux > 0
+      ? await this.prisma.supplement.findFirst({ where: { parAnimal: true }, select: { id: true, tarif: true } })
+      : null;
+
     return this.prisma.reservation.create({
       data: {
         debut: dto.debut,
         fin: dto.fin,
-        nbPersonne: toNbPersonneJson(dto.nbPersonne),
+        adultes: dto.adultes,
+        enfants: dto.enfants ?? 0,
+        animaux,
         statut: ReservationStatut.DEMANDE,
         source: ReservationSource.SITE,
         demandeurNom: dto.nom,
         demandeurEmail: dto.email,
         demandeurTelephone: dto.phone,
         message: dto.message || null,
+        ...(supplementAnimal && {
+          supplements: {
+            create: this.toSupplementsCreate([{ supplementId: supplementAnimal.id, nb: animaux, tarif: supplementAnimal.tarif }]),
+          },
+        }),
       },
     });
   }
@@ -170,7 +186,9 @@ export class ReservationsService {
       debut: dto.debut,
       fin: dto.fin,
       tarif: dto.tarif,
-      nbPersonne: dto.nbPersonne ? toNbPersonneJson(dto.nbPersonne) : undefined,
+      adultes: dto.adultes,
+      enfants: dto.enfants,
+      animaux: dto.animaux,
       client: Object.keys(client).length > 0 ? client : undefined,
       supplements: supplements ? { deleteMany: {}, create: this.toSupplementsCreate(supplements) } : undefined,
     };

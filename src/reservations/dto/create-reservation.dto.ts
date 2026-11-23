@@ -11,22 +11,23 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator'
-import { IsAfter } from 'src/common/validation'
-import { NbPersonneDto, SupplementLineDto } from './nb-personne.dto'
+import { IsAfter, IsMontant, IsNbVoyageurs } from 'src/common/validation'
+import { SupplementLineDto } from './supplement-line.dto'
 
 const isNewClient = (dto: CreateReservationDto) => dto.clientId === null || dto.clientId === undefined
 
 export class CreateReservationDto {
 
-  constructor(tarif: number, debut: Date, fin: Date, nbPersonne: NbPersonneDto[], clientId?: number | null, nom?: string, prenom?: string, email?: string, telephone?: string, statut?: ReservationStatut, supplements?: SupplementLineDto[]) {
+  constructor(tarif: number, debut: Date, fin: Date, clientId?: number | null, nom?: string, prenom?: string, email?: string, telephone?: string, statut?: ReservationStatut, supplements?: SupplementLineDto[], adultes?: number, enfants?: number, animaux?: number) {
     this.tarif = tarif;
     this.debut = debut;
     this.fin = fin;
-    this.nbPersonne = nbPersonne;
+    this.adultes = adultes;
+    this.enfants = enfants;
+    this.animaux = animaux;
     this.clientId = clientId;
     this.nom = nom;
     this.prenom = prenom;
@@ -36,9 +37,8 @@ export class CreateReservationDto {
     this.supplements = supplements;
   }
 
-  @ApiProperty({ description: 'Prix du séjour (0 accepté)' })
-  @IsInt()
-  @Min(0)
+  @ApiProperty({ description: 'Prix du séjour par semaine, en euros (0 accepté)' })
+  @IsMontant()
   readonly tarif: number
 
   @ApiProperty({ description: "Date d'arrivée", type: String, format: 'date' })
@@ -52,11 +52,20 @@ export class CreateReservationDto {
   @IsAfter('debut')
   readonly fin: Date
 
-  @ApiProperty({ description: 'Nombre de personnes par catégorie', type: [NbPersonneDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => NbPersonneDto)
-  readonly nbPersonne: NbPersonneDto[]
+  @ApiProperty({ description: 'Nombre d’adultes (0 par défaut)', required: false })
+  @IsOptional()
+  @IsNbVoyageurs()
+  readonly adultes?: number
+
+  @ApiProperty({ description: 'Nombre d’enfants (0 par défaut)', required: false })
+  @IsOptional()
+  @IsNbVoyageurs()
+  readonly enfants?: number
+
+  @ApiProperty({ description: 'Nombre d’animaux (0 par défaut)', required: false })
+  @IsOptional()
+  @IsNbVoyageurs()
+  readonly animaux?: number
 
   @ApiProperty({ description: 'Client existant ; sinon un client est créé avec les champs ci-dessous', required: false, nullable: true })
   @IsOptional()

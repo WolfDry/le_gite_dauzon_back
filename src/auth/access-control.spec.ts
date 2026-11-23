@@ -10,7 +10,7 @@ import { ADMIN, createTestApp, TestApp } from '../testing/test-app';
 const REQUEST = {
   debut: '2026-07-04',
   fin: '2026-07-11',
-  nbPersonne: [{ label: 'Adultes', nb: 2 }],
+  adultes: 2,
   nom: 'Marie Dupont',
   email: 'a@b.fr',
   phone: '06 12 34 56 78',

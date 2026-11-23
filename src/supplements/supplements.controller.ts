@@ -15,11 +15,12 @@ export class SupplementsController {
   @ApiOperation({ summary: "Create a supplement" })
   @ApiBody({ type: CreateSupplementDto })
   create(@Body() createSupplementsDto: CreateSupplementDto) {
-    const { tarif, label, type } = createSupplementsDto;
+    const { tarif, label, type, parAnimal } = createSupplementsDto;
     const payload: Prisma.SupplementCreateInput = {
       tarif,
       label,
-      type
+      type,
+      parAnimal,
     }
     return this.supplementsService.create(payload);
   }

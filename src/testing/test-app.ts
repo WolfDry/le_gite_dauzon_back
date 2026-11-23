@@ -12,16 +12,20 @@ import * as request from 'supertest';
 const model = () => ({
   findMany: jest.fn().mockResolvedValue([]),
   findUnique: jest.fn().mockResolvedValue(null),
+  findFirst: jest.fn().mockResolvedValue(null),
   findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 1 }),
   count: jest.fn().mockResolvedValue(1),
   create: jest.fn().mockImplementation(async ({ data }) => ({ id: 1, ...data })),
   update: jest.fn().mockImplementation(async ({ data }) => ({ id: 1, ...data })),
   delete: jest.fn().mockResolvedValue({ id: 1 }),
   deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+  updateMany: jest.fn().mockResolvedValue({ count: 0 }),
 });
 
 const createPrismaMock = () => ({
   onModuleInit: jest.fn(),
+  // Les opérations reçues sont déjà des promesses simulées.
+  $transaction: jest.fn((operations: Promise<unknown>[]) => Promise.all(operations)),
   user: model(),
   client: model(),
   reservation: model(),

@@ -12,11 +12,10 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  Min,
   ValidateNested,
 } from 'class-validator'
-import { IsAfter } from 'src/common/validation'
-import { NbPersonneDto, SupplementLineDto } from './nb-personne.dto'
+import { IsAfter, IsMontant, IsNbVoyageurs } from 'src/common/validation'
+import { SupplementLineDto } from './supplement-line.dto'
 
 export class UpdateReservationClientDto {
   @ApiProperty({ required: false })
@@ -82,10 +81,9 @@ export class NewReservationClientDto {
 
 export class UpdateReservationDto {
 
-  @ApiProperty({ description: 'Prix du séjour (0 accepté, null pour une demande non chiffrée)', required: false, nullable: true })
+  @ApiProperty({ description: 'Prix du séjour par semaine, en euros (0 accepté, null pour une demande non chiffrée)', required: false, nullable: true })
   @IsOptional()
-  @IsInt()
-  @Min(0)
+  @IsMontant()
   readonly tarif?: number | null
 
   @ApiProperty({ description: "Date d'arrivée", type: String, format: 'date', required: false })
@@ -101,12 +99,20 @@ export class UpdateReservationDto {
   @IsAfter('debut')
   readonly fin?: Date
 
-  @ApiProperty({ description: 'Nombre de personnes par catégorie', type: [NbPersonneDto], required: false })
+  @ApiProperty({ description: 'Nombre d’adultes', required: false })
   @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => NbPersonneDto)
-  readonly nbPersonne?: NbPersonneDto[]
+  @IsNbVoyageurs()
+  readonly adultes?: number
+
+  @ApiProperty({ description: 'Nombre d’enfants', required: false })
+  @IsOptional()
+  @IsNbVoyageurs()
+  readonly enfants?: number
+
+  @ApiProperty({ description: 'Nombre d’animaux', required: false })
+  @IsOptional()
+  @IsNbVoyageurs()
+  readonly animaux?: number
 
   @ApiProperty({ description: 'Client existant à rattacher (null pour détacher le client)', required: false, nullable: true })
   @IsOptional()

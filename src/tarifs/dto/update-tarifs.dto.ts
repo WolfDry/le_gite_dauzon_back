@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { TarifFrequence } from "@prisma/client"
-import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator"
+import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator"
+import { IsMontant } from "src/common/validation"
 
 export class UpdateTarifsDto {
 
@@ -28,10 +29,9 @@ export class UpdateTarifsDto {
   @IsBoolean()
   readonly vacance?: boolean
 
-  @ApiProperty({ description: 'Price of a tarif (0 accepted)', required: false })
+  @ApiProperty({ description: 'Price of a tarif, in euros (0 accepted)', required: false })
   @IsOptional()
-  @IsNumber({ allowNaN: false, allowInfinity: false })
-  @Min(0)
+  @IsMontant()
   readonly prix?: number
 
   @ApiProperty({ description: 'Frequency of a tarif', enum: TarifFrequence, isArray: true, required: false })

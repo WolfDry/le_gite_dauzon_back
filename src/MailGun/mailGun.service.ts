@@ -11,10 +11,9 @@ type Content = {
   message?: string
   debut?: Date | null
   fin?: Date | null
-  nbPersonne?: {
-    label: string
-    nb: number
-  }[]
+  adultes?: number
+  enfants?: number
+  animaux?: number
 }
 
 const escapeHtml = (value?: string | null) =>
@@ -27,6 +26,18 @@ const escapeHtml = (value?: string | null) =>
 
 const formatDate = (value?: Date | null) =>
   value ? new Date(value).toLocaleDateString('fr-FR', { timeZone: 'UTC' }) : '?'
+
+const VOYAGEURS = [
+  ['adultes', 'adulte', 'adultes'],
+  ['enfants', 'enfant', 'enfants'],
+  ['animaux', 'animal', 'animaux'],
+] as const
+
+const formatVoyageurs = (content?: Content) =>
+  VOYAGEURS.flatMap(([key, singulier, pluriel]) => {
+    const nb = content?.[key] ?? 0
+    return nb > 0 ? [`${nb} ${nb === 1 ? singulier : pluriel}`] : []
+  }).join(', ')
 
 const paragraphs = (text: string) => escapeHtml(text).replace(/\r?\n/g, '<br>')
 
@@ -70,10 +81,7 @@ export class MailGunsService {
 
     switch (subject) {
       case 'reservation': {
-        const personnes = (content?.nbPersonne ?? [])
-          .filter((np) => np.nb > 0)
-          .map((np) => `${np.label} : ${np.nb}`)
-          .join(', ')
+        const personnes = formatVoyageurs(content)
         const dates = `Du ${formatDate(content?.debut)} au ${formatDate(content?.fin)}`
         data = {
           subject: `Nouvelle demande de réservation${content?.name ? ` de ${content.name.replace(/\s+/g, ' ')}` : ''}`,

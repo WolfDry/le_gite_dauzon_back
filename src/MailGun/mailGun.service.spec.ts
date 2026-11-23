@@ -25,4 +25,13 @@ describe('MailGunsService', () => {
     expect(html).not.toContain('<a href')
     expect(html).toContain('&lt;b&gt;Jean&lt;/b&gt;')
   })
+
+  it('détaille les voyageurs de la demande de réservation, au singulier ou au pluriel', async () => {
+    const service = new MailGunsService(config)
+    const create = jest.fn()
+    ;(service as unknown as { mg: { messages: { create: jest.Mock } } }).mg = { messages: { create } }
+
+    await service.sendMail('reservation', { name: 'Jean', email: 'jean@example.com', adultes: 2, enfants: 0, animaux: 1 })
+    expect(create.mock.calls[0][1].text).toContain('Personnes : 2 adultes, 1 animal')
+  })
 })

@@ -40,13 +40,13 @@ enum ReservationSource {
 }
 
 model User {
-  id       Int    @id @unique @default(autoincrement())
+  id       Int    @id @default(autoincrement())
   email    String @unique
   password String
 }
 
 model Client {
-  id        Int    @id @unique @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   nom       String
   prenom    String
   email     String
@@ -56,12 +56,15 @@ model Client {
 }
 
 model Reservation {
-  id         Int      @id @unique @default(autoincrement())
-  tarif      Int?
-  debut      DateTime @db.Date
-  fin        DateTime @db.Date
-  dateAjout  DateTime @default(now())
-  nbPersonne Json
+  id        Int      @id @default(autoincrement())
+  tarif     Float?
+  debut     DateTime @db.Date
+  fin       DateTime @db.Date
+  dateAjout DateTime @default(now())
+
+  adultes Int @default(0)
+  enfants Int @default(0)
+  animaux Int @default(0)
 
   statut          ReservationStatut @default(DEMANDE)
   statutModifieLe DateTime          @default(now())
@@ -78,13 +81,18 @@ model Reservation {
   supplements SupplementOnReservation[]
 
   @@index([statut, fin])
+  @@index([debut, fin])
+  @@index([clientId])
 }
 
 model Supplement {
-  id    Int            @id @unique @default(autoincrement())
-  label String         @unique @default("")
-  tarif Int
-  type  SupplementType
+  id        Int            @id @default(autoincrement())
+  label     String         @unique @default("")
+  tarif     Float
+  type      SupplementType
+  /// Supplément facturé par animal : ajouté automatiquement aux demandes du site qui indiquent des animaux.
+  /// Un seul supplément l'est à la fois.
+  parAnimal Boolean        @default(false)
 
   reservations SupplementOnReservation[]
 }
@@ -95,14 +103,14 @@ model SupplementOnReservation {
   supplement    Supplement  @relation(fields: [supplementId], references: [id])
   supplementId  Int
   nb            Int
-  /// Prix unitaire appliqué à cette réservation (copié du catalogue à l'ajout, modifiable ensuite).
-  tarif         Int
+  tarif         Float
 
   @@id([reservationId, supplementId])
+  @@index([supplementId])
 }
 
 model Commentaire {
-  id          Int      @id @unique @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   verif       Boolean  @default(false)
   created     DateTime @default(now()) @db.Date
   commentaire String
@@ -111,7 +119,7 @@ model Commentaire {
 }
 
 model Tarif {
-  id        Int              @id @unique @default(autoincrement())
+  id        Int              @id @default(autoincrement())
   desc      String
   label     String           @unique
   date      String[]
@@ -121,7 +129,7 @@ model Tarif {
 }
 
 model Evenement {
-  id           Int       @id @unique @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   titre        String
   image        String
   date         DateTime?
