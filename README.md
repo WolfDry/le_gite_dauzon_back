@@ -27,6 +27,9 @@ Hors production, la documentation Swagger est servie sur `/api`.
 | `npm run format` | Prettier |
 | `npm run create-admin -- <email> <mdp>` | Crée un compte de l'admin directement en base (pas d'inscription publique) |
 
+L'intégration continue ([.github/workflows/ci.yml](.github/workflows/ci.yml)) lance le lint, les tests et `nest build`
+à chaque push et sur chaque pull request. Elle n'utilise ni secret ni base de données, et n'applique pas les migrations.
+
 ## Variables d'environnement
 
 | Variable | Rôle |

@@ -1,0 +1,43 @@
+name: CI
+
+# Lint, tests et compilation à chaque push (toutes branches) et sur chaque pull request.
+# Aucun secret ni base de données : les tests simulent Prisma, Mailgun et Cloudinary.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un nouveau push sur la même branche annule la vérification précédente, devenue inutile.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    name: Lint, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # Le postinstall lance `prisma generate` : il n'a pas besoin de base de données.
+      - name: Installation
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test -- --ci
+
+      # Pas `npm run build` : ce script applique aussi les migrations sur la base (prisma migrate deploy).
+      - name: Compilation
+        run: npx nest build
