@@ -33,6 +33,7 @@
 | `JWT_SECRET`, `JWT_EXPIRES` | Jetons d'authentification |
 | `SECRET_SALT` | Préfixe des mots de passe hachés |
 | `MAILGUN_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_EMAIL_RECEPTION` | Envoi des e-mails |
+| `MAILGUN_FROM` | Expéditeur des e-mails, facultatif (par défaut `Le gite d'auzon <contact@legitedauzon.fr>`) |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Stockage des images d'événements |
 
 Les images d'événements sont stockées sur Cloudinary, dans le dossier `evenements`.

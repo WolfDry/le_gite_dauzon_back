@@ -339,6 +339,11 @@ describe("Règles de l'API", () => {
       await t.http().post('/commentaires').send({ name: 'Jean', commentaire: 'Super', note: 5 }).expect(201);
     });
 
+    it('transmet le commentaire au mail de notification', async () => {
+      await t.http().post('/commentaires').send({ name: 'Jean', commentaire: 'Super', note: 5 }).expect(201);
+      expect(t.mail.sendMail).toHaveBeenCalledWith('commentaire', { name: 'Jean', note: 5, message: 'Super' });
+    });
+
     it('le public ne voit que les commentaires validés', async () => {
       await t.http().get('/commentaires').expect(200);
       expect(t.prisma.commentaire.findMany).toHaveBeenCalledWith(

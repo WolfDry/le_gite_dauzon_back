@@ -45,7 +45,7 @@ export class CommentairesController {
 
     const result = await this.commentairesService.create(payload)
     try {
-      await this.mailGunService.sendMail('commentaire')
+      await this.mailGunService.sendMail('commentaire', { name, note, message: commentaire })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       this.logger.error(`Mail du commentaire ${result.id} non envoyé : ${reason}`)
