@@ -70,6 +70,7 @@ describe("Règles de l'API", () => {
           adultes: 2,
           enfants: 1,
           animaux: 0,
+          taxeSejour: 1.65,
           statut: 'DEMANDE',
           source: 'SITE',
           demandeurNom: 'Marie Dupont',

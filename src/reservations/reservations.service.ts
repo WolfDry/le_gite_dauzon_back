@@ -5,6 +5,8 @@ import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto';
 import { SupplementLineDto } from './dto/supplement-line.dto';
 import { ListReservationsQueryDto } from './dto/list-reservations-query.dto';
+import { ReglagesService } from 'src/tarification/reglages.service';
+import { totalReservation } from 'src/tarification/calcul';
 
 export type PricedSupplementLine = { supplementId: number; nb: number; tarif: number };
 
@@ -28,6 +30,7 @@ export const SELECT_LISTE = {
   fin: true,
   adultes: true,
   enfants: true,
+  taxeSejour: true,
   statut: true,
   source: true,
   demandeurNom: true,
@@ -58,12 +61,18 @@ export const SELECT_APERCU = {
 
 @Injectable()
 export class ReservationsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private reglagesService: ReglagesService,
+  ) { }
 
-  create(data: Omit<Prisma.ReservationCreateInput, 'supplements'>, supplements: PricedSupplementLine[] = []) {
+  /** La taxe de séjour est celle des réglages au moment de l'enregistrement. */
+  async create(data: Omit<Prisma.ReservationCreateInput, 'supplements' | 'taxeSejour'>, supplements: PricedSupplementLine[] = []) {
+    const { taxeSejour } = await this.reglagesService.get();
     return this.prisma.reservation.create({
       data: {
         ...data,
+        taxeSejour,
         supplements: supplements.length ? { create: this.toSupplementsCreate(supplements) } : undefined,
       },
     });
@@ -78,6 +87,7 @@ export class ReservationsService {
     const supplementAnimal = animaux > 0
       ? await this.prisma.supplement.findFirst({ where: { parAnimal: true }, select: { id: true, tarif: true } })
       : null;
+    const { taxeSejour } = await this.reglagesService.get();
 
     return this.prisma.reservation.create({
       data: {
@@ -86,6 +96,7 @@ export class ReservationsService {
         adultes: dto.adultes,
         enfants: dto.enfants ?? 0,
         animaux,
+        taxeSejour,
         statut: ReservationStatut.DEMANDE,
         source: ReservationSource.SITE,
         demandeurNom: dto.nom,
@@ -147,18 +158,20 @@ export class ReservationsService {
   /**
    * Réservations qui touchent la période [depuis, jusqua], bornes incluses (le jour de départ compte),
    * triées par date d'arrivée. Sans filtre : tout l'historique.
+   * La vue `liste` ajoute le `total` de chaque réservation, calculé avec la règle de prix du gîte.
    */
-  findAll({ depuis, jusqua, statut, vue = 'liste' }: ListReservationsQueryDto = {}) {
+  async findAll({ depuis, jusqua, statut, vue = 'liste' }: ListReservationsQueryDto = {}) {
     const where: Prisma.ReservationWhereInput = {};
     if (depuis) where.fin = { gte: depuis };
     if (jusqua) where.debut = { lte: jusqua };
     if (statut?.length) where.statut = { in: statut };
+    const orderBy: Prisma.ReservationOrderByWithRelationInput[] = [{ debut: 'asc' }, { id: 'asc' }];
 
-    return this.prisma.reservation.findMany({
-      where,
-      select: vue === 'apercu' ? SELECT_APERCU : SELECT_LISTE,
-      orderBy: [{ debut: 'asc' }, { id: 'asc' }],
-    });
+    if (vue === 'apercu') {
+      return this.prisma.reservation.findMany({ where, select: SELECT_APERCU, orderBy });
+    }
+    const reservations = await this.prisma.reservation.findMany({ where, select: SELECT_LISTE, orderBy });
+    return reservations.map((reservation) => ({ ...reservation, total: totalReservation(reservation) }));
   }
 
 

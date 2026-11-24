@@ -20,10 +20,28 @@ const model = () => ({
   count: jest.fn().mockResolvedValue(1),
   create: jest.fn().mockImplementation(async ({ data }) => ({ id: 1, ...data })),
   update: jest.fn().mockImplementation(async ({ data }) => ({ id: 1, ...data })),
+  upsert: jest.fn().mockImplementation(async ({ create }) => ({ id: 1, ...create })),
   delete: jest.fn().mockResolvedValue({ id: 1 }),
   deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
   updateMany: jest.fn().mockResolvedValue({ count: 0 }),
 });
+
+/** Un tarif est toujours renvoyé avec ses périodes (`include`). */
+const tarifModel = () => {
+  const tarif = model();
+  const avecPeriodes = async ({ data }: { data: Record<string, unknown> }) => ({ id: 1, ...data, periodes: [] });
+  tarif.findUniqueOrThrow.mockResolvedValue({
+    id: 1,
+    date: [],
+    frequence: ['SEMAINE'],
+    parDefaut: false,
+    periodes: [],
+    _count: { periodes: 0 },
+  });
+  tarif.create.mockImplementation(avecPeriodes);
+  tarif.update.mockImplementation(avecPeriodes);
+  return tarif;
+};
 
 const createPrismaMock = () => ({
   onModuleInit: jest.fn(),
@@ -35,7 +53,9 @@ const createPrismaMock = () => ({
   supplement: model(),
   supplementOnReservation: model(),
   commentaire: model(),
-  tarif: model(),
+  tarif: tarifModel(),
+  tarifPeriode: model(),
+  reglages: model(),
   evenement: model(),
 });
 

@@ -2,10 +2,11 @@ import { ApiProperty } from "@nestjs/swagger"
 import { TarifFrequence } from "@prisma/client"
 import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator"
 import { IsMontant } from "src/common/validation"
+import { IsPeriodes, PeriodeDto } from "./periode.dto"
 
 export class CreateTarifsDto {
 
-  constructor(desc: string, label: string, date: string[], vacance: boolean | undefined, prix: number, frequence: TarifFrequence[]) {
+  constructor(desc: string, label: string, date: string[] | undefined, vacance: boolean | undefined, prix: number, frequence: TarifFrequence[]) {
     this.desc = desc;
     this.label = label;
     this.date = date;
@@ -25,10 +26,11 @@ export class CreateTarifsDto {
   @MaxLength(100)
   readonly label: string
 
-  @ApiProperty({ description: 'Periods of a tarif, displayed as is', type: [String] })
+  @ApiProperty({ description: 'Former free-text periods, displayed while the tarif has no dated period', type: [String], required: false })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  readonly date: string[]
+  readonly date?: string[]
 
   @ApiProperty({ description: 'Tarif is during vacance', required: false })
   @IsOptional()
@@ -43,4 +45,21 @@ export class CreateTarifsDto {
   @IsArray()
   @IsEnum(TarifFrequence, { each: true })
   readonly frequence: TarifFrequence[]
+
+  @ApiProperty({
+    description: 'Dated periods (nights from debut to fin, fin excluded). Replace all the periods of the tarif and clear the free text',
+    type: [PeriodeDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsPeriodes()
+  readonly periodes?: PeriodeDto[]
+
+  @ApiProperty({
+    description: 'Weekly tarif of the nights no period covers (low season). Marking one unmarks the others',
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  readonly parDefaut?: boolean
 }

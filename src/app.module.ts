@@ -11,6 +11,7 @@ import { SupplementsModule } from './supplements/supplements.module'
 import { CommentairesModule } from './commentaires/commentaires.module'
 import { ReservationsModule } from './reservations/reservations.module'
 import { CronModule } from './cron/cron.module'
+import { TarificationModule } from './tarification/tarification.module'
 import { AuthModule } from './auth/auth.module'
 import { UploadModule } from './Upload/Upload.module'
 import { JwtAuthGuard } from './auth/jwt-auth.guard'
@@ -31,6 +32,7 @@ import { PrismaExceptionFilter } from './common/prisma-exception.filter'
     SupplementsModule,
     CommentairesModule,
     TarifsModule,
+    TarificationModule,
     MailGunModule,
     EvenementsModule,
     CronModule,

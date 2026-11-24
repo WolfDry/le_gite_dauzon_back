@@ -66,6 +66,8 @@ model Reservation {
   enfants Int @default(0)
   animaux Int @default(0)
 
+  taxeSejour Float
+
   statut          ReservationStatut @default(DEMANDE)
   statutModifieLe DateTime          @default(now())
   source          ReservationSource @default(ADMIN)
@@ -122,10 +124,42 @@ model Tarif {
   id        Int              @id @default(autoincrement())
   desc      String
   label     String           @unique
+  /// Ancien texte libre des périodes, affiché tant que le tarif n'a aucune période datée.
   date      String[]
   vacance   Boolean          @default(false)
   prix      Float
   frequence TarifFrequence[]
+  /// Tarif à la semaine des nuits qu'aucune période ne couvre (la basse saison). Un seul tarif l'est à la fois.
+  parDefaut Boolean          @default(false)
+
+  periodes TarifPeriode[]
+}
+
+/// Période d'application d'un tarif : les nuits du `debut` (inclus) au `fin` (jour de départ, exclu).
+/// Les périodes de tarifs différents ne se chevauchent pas : chaque nuit a au plus un tarif.
+model TarifPeriode {
+  id      Int      @id @default(autoincrement())
+  tarif   Tarif    @relation(fields: [tarifId], references: [id], onDelete: Cascade)
+  tarifId Int
+  debut   DateTime @db.Date
+  fin     DateTime @db.Date
+
+  @@index([tarifId])
+  @@index([debut, fin])
+}
+
+/// Réglages du gîte : une seule ligne (id 1).
+model Reglages {
+  id                 Int   @id @default(1)
+  /// Taxe de séjour par adulte et par nuit, en euros.
+  taxeSejour         Float @default(1.65)
+  /// Nombre maximal de voyageurs (adultes et enfants).
+  capacite           Int   @default(5)
+  /// Premier et dernier mois de la saison (1 à 12), inclus.
+  saisonDebut        Int   @default(4)
+  saisonFin          Int   @default(9)
+  /// Acompte demandé à la réservation, en pourcentage du séjour hors taxe de séjour.
+  acomptePourcentage Int   @default(30)
 }
 
 model Evenement {

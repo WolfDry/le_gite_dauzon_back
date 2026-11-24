@@ -43,8 +43,13 @@ describe("Contrôle d'accès de l'API", () => {
       ['get', '/commentaires'],
       ['get', '/tarifs'],
       ['get', '/evenements'],
+      ['get', '/reglages'],
     ] as const)('%s %s est accessible', async (method, path) => {
       await t.http()[method](path).expect(200);
+    });
+
+    it('calcule un devis', async () => {
+      await t.http().post('/devis').send({ debut: '2026-07-04', fin: '2026-07-11', adultes: 2 }).expect(200);
     });
 
     it('accepte une demande de réservation', async () => {
@@ -83,6 +88,7 @@ describe("Contrôle d'accès de l'API", () => {
       ['get', '/tarifs/1'],
       ['patch', '/tarifs/1'],
       ['delete', '/tarifs/1'],
+      ['patch', '/reglages'],
       ['get', '/supplements'],
       ['post', '/supplements'],
       ['patch', '/supplements/1'],

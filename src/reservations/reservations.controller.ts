@@ -30,7 +30,7 @@ export class ReservationsController {
       email: email as string,
       telephone: telephone as string,
     }
-    const payload: Omit<Prisma.ReservationCreateInput, 'supplements'> = {
+    const payload: Omit<Prisma.ReservationCreateInput, 'supplements' | 'taxeSejour'> = {
       tarif,
       debut,
       fin,

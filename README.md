@@ -53,6 +53,30 @@ L'intégration continue ([.github/workflows/ci.yml](.github/workflows/ci.yml)) l
 3. Vercel Cron appelle `GET /cron/purge-demandes` chaque nuit avec `CRON_SECRET` : les demandes refusées
    ou jamais traitées sont supprimées 90 jours après.
 
+## Règle de prix
+
+L'API est la seule à connaître la règle de prix ([src/tarification/calcul.ts](src/tarification/calcul.ts)) :
+
+- l'hébergement se paie par semaine entière, une semaine au minimum. Les jours restants ne sont pas facturés.
+  Chaque semaine prend le tarif à la semaine de la période qui couvre sa première nuit, sinon le tarif marqué
+  `parDefaut` (la basse saison). Du samedi au dimanche (1 nuit), c'est le premier prix de fréquence `WEEKEND` ;
+- la taxe de séjour se paie par adulte et par nuit. Chaque réservation garde le taux en vigueur à son
+  enregistrement (`Reservation.taxeSejour`) ;
+- suppléments : `SEJOUR` une fois, `QUOTIDIEN` par nuit, `HEBDOMADAIRE` par semaine entière, plus une semaine
+  au-delà de 4 jours entamés ;
+- l'acompte porte sur l'hébergement et les suppléments, sans la taxe de séjour.
+
+Routes :
+
+- `GET /reglages` (public) et `PATCH /reglages` (admin) : taxe de séjour, capacité, mois de saison et
+  pourcentage d'acompte, sur une seule ligne de la table `Reglages` ;
+- `POST /devis` (public, n'écrit rien) : prix détaillé d'un séjour. Sans `tarif`, l'hébergement suit les
+  périodes datées des tarifs ; `tarifPropose` donne le prix par semaine qu'elles indiquent ;
+- `GET /reservations` (vue `liste`) renvoie le `total` de chaque réservation ;
+- les tarifs à la semaine ont des périodes datées (`TarifPeriode` : nuits du `debut` au `fin`, jour de départ
+  exclu), qui ne se chevauchent pas d'un tarif à l'autre. Un seul tarif à la semaine est `parDefaut`. `GET /tarifs` renvoie dans `date` le texte des périodes pas
+  encore terminées, ou l'ancien texte libre pour un tarif sans période datée.
+
 ## Images d'événements
 
 Les images d'événements sont stockées sur Cloudinary, dans le dossier `evenements`.

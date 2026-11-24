@@ -3,7 +3,6 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from 
 import { TarifsService } from './tarifs.service';
 import { CreateTarifsDto } from './dto/create-tarifs.dto';
 import { UpdateTarifsDto } from './dto/update-tarifs.dto';
-import { Prisma } from '@prisma/client';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/auth/public.decorator';
 @ApiTags('tarifs')
@@ -16,14 +15,12 @@ export class TarifsController {
   @ApiOperation({ summary: "Create a tarif" })
   @ApiBody({ type: CreateTarifsDto })
   create(@Body() createTarifsDto: CreateTarifsDto) {
-    const { desc, label, date, vacance, prix, frequence } = createTarifsDto;
-    const payload: Prisma.TarifCreateInput = { desc, label, date, vacance, prix, frequence }
-    return this.tarifsService.create(payload)
+    return this.tarifsService.create(createTarifsDto)
   }
 
   @Public()
   @Get()
-  @ApiOperation({ summary: "Get all tarifs" })
+  @ApiOperation({ summary: "Get all tarifs, with their dated periods (public)" })
   findAll() {
     return this.tarifsService.findAll();
   }
@@ -38,9 +35,7 @@ export class TarifsController {
   @ApiOperation({ summary: "Update a tarif" })
   @ApiBody({ type: UpdateTarifsDto })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateTarifsDto: UpdateTarifsDto) {
-
-    const payload: Prisma.TarifUpdateInput = { ...updateTarifsDto }
-    return this.tarifsService.update(id, payload);
+    return this.tarifsService.update(id, updateTarifsDto);
   }
 
   @Delete(':id')
