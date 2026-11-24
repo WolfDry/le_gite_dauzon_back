@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common'
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
-import { AppService } from './app.service'
 import { ConfigModule } from '@nestjs/config'
-import { AppController } from './app.controller'
 import { UsersModule } from './users/users.module'
 import { TarifsModule } from './tarifs/tarifs.module'
 import { ClientsModule } from './clients/clients.module'
@@ -38,9 +36,7 @@ import { PrismaExceptionFilter } from './common/prisma-exception.filter'
     CronModule,
     UploadModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_PIPE, useFactory: createValidationPipe },

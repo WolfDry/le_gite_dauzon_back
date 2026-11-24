@@ -39,7 +39,6 @@ describe("Contrôle d'accès de l'API", () => {
 
   describe('routes du site public (sans jeton)', () => {
     it.each([
-      ['get', '/'],
       ['get', '/reservations/disponibilites'],
       ['get', '/commentaires'],
       ['get', '/tarifs'],
