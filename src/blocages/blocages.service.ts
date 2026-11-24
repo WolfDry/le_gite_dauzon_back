@@ -61,9 +61,9 @@ export class BlocagesService {
     return this.prisma.blocage.delete({ where: { id } });
   }
 
-  /** Deux blocages ne se chevauchent pas ; ils peuvent se suivre (fin de l'un = début de l'autre). */
-  private async verifierChevauchement(debut: Date, fin: Date, exceptId?: number) {
-    const conflit = await this.prisma.blocage.findFirst({
+  /** Premier blocage qui partage au moins une nuit avec [debut, fin), ou `null`. Les périodes peuvent se suivre. */
+  findChevauchement(debut: Date, fin: Date, exceptId?: number) {
+    return this.prisma.blocage.findFirst({
       where: {
         debut: { lt: fin },
         fin: { gt: debut },
@@ -71,6 +71,11 @@ export class BlocagesService {
       },
       select: { debut: true, fin: true },
     });
+  }
+
+  /** Deux blocages ne se chevauchent pas ; ils peuvent se suivre (fin de l'un = début de l'autre). */
+  private async verifierChevauchement(debut: Date, fin: Date, exceptId?: number) {
+    const conflit = await this.findChevauchement(debut, fin, exceptId);
     if (conflit) {
       throw new BadRequestException([
         `Ces dates chevauchent des dates déjà bloquées (du ${jour(conflit.debut)} au ${jour(conflit.fin)})`,

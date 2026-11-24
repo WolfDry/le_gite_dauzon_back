@@ -57,7 +57,7 @@ export class ReservationsController {
   @ThrottlePublicWrite()
   @ProtectFromBots({ id: 0 })
   @Post('/request')
-  @ApiOperation({ summary: "Create a reservation request (public, always DEMANDE)" })
+  @ApiOperation({ summary: "Create a reservation request (public, always DEMANDE). 409 if the dates overlap an OPTION or CONFIRMEE stay or blocked dates" })
   @ApiBody({ type: CreateRequestReservationDto })
   async createRequest(@Body() dto: CreateRequestReservationDto) {
     const reservation = await this.reservationsService.createRequest(dto)

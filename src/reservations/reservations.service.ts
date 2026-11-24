@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma, ReservationSource, ReservationStatut } from '@prisma/client';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
@@ -85,6 +85,7 @@ export class ReservationsService {
    * facturé par animal (s'il existe) est ajouté avec ce nombre, au prix actuel du catalogue.
    */
   async createRequest(dto: CreateRequestReservationDto) {
+    await this.verifierDisponibilite(dto.debut, dto.fin);
     const animaux = dto.animaux ?? 0;
     const supplementAnimal = animaux > 0
       ? await this.prisma.supplement.findFirst({ where: { parAnimal: true }, select: { id: true, tarif: true } })
@@ -112,6 +113,23 @@ export class ReservationsService {
         }),
       },
     });
+  }
+
+  /**
+   * Refuse (409) un séjour qui partage une nuit avec une option, un séjour confirmé ou des dates bloquées :
+   * ce sont les périodes affichées comme réservées sur le site. Les séjours peuvent se suivre.
+   */
+  private async verifierDisponibilite(debut: Date, fin: Date) {
+    const [reservation, blocage] = await Promise.all([
+      this.prisma.reservation.findFirst({
+        where: { statut: { in: STATUTS_BLOQUANTS }, debut: { lt: fin }, fin: { gt: debut } },
+        select: { id: true },
+      }),
+      this.blocagesService.findChevauchement(debut, fin),
+    ]);
+    if (reservation || blocage) {
+      throw new ConflictException('Ces dates ne sont plus disponibles');
+    }
   }
 
   /**

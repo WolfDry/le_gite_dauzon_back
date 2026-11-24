@@ -136,6 +136,28 @@ describe("Règles de l'API", () => {
       expect(t.prisma.supplement.findFirst).not.toHaveBeenCalled();
     });
 
+    it('vérifie les nuits demandées contre les options, séjours confirmés et dates bloquées', async () => {
+      await t.http().post('/reservations/request').send(REQUEST).expect(201);
+      // Bornes strictes : les séjours peuvent se suivre (départ le jour d'une arrivée).
+      const nuits = { debut: { lt: new Date('2026-07-11') }, fin: { gt: new Date('2026-07-04') } };
+      expect(t.prisma.reservation.findFirst).toHaveBeenCalledWith({
+        where: { statut: { in: ['OPTION', 'CONFIRMEE'] }, ...nuits },
+        select: { id: true },
+      });
+      expect(t.prisma.blocage.findFirst).toHaveBeenCalledWith({ where: nuits, select: { debut: true, fin: true } });
+    });
+
+    it.each([
+      ['un séjour réservé', 'reservation', { id: 3 }],
+      ['des dates bloquées', 'blocage', { debut: new Date('2026-07-01'), fin: new Date('2026-07-06') }],
+    ] as const)('refuse (409) des dates qui chevauchent %s, sans rien enregistrer ni envoyer', async (_, modele, conflit) => {
+      t.prisma[modele].findFirst.mockResolvedValueOnce(conflit);
+      const res = await t.http().post('/reservations/request').send(REQUEST).expect(409);
+      expect(res.body.message).toBe('Ces dates ne sont plus disponibles');
+      expect(t.prisma.reservation.create).not.toHaveBeenCalled();
+      expect(t.mail.sendMail).not.toHaveBeenCalled();
+    });
+
     it.each([
       ['un départ avant l’arrivée', { fin: '2026-07-01' }],
       ['un départ le jour de l’arrivée', { fin: '2026-07-04' }],
