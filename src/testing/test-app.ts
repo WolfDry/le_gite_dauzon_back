@@ -3,6 +3,9 @@ import { Test } from '@nestjs/testing';
 import { getStorageToken, ThrottlerStorageService } from '@nestjs/throttler';
 import * as bcrypt from 'bcryptjs';
 import * as request from 'supertest';
+import { AppModule } from '../app.module';
+import { PrismaService } from '../prisma.service';
+import { MailGunsService } from '../MailGun/mailGun.service';
 
 /**
  * Application complète (gardes, validation, filtres) pour les tests,
@@ -43,11 +46,6 @@ export const ADMIN = { id: 1, email: 'admin@example.com', password: 'secret-admi
 export async function createTestApp() {
   process.env.JWT_SECRET = 'test-secret';
   process.env.SECRET_SALT = 'test-salt';
-
-  // Importés après avoir défini l'environnement : AuthModule lit JWT_SECRET au chargement.
-  const { AppModule } = await import('../app.module');
-  const { PrismaService } = await import('../prisma.service');
-  const { MailGunsService } = await import('../MailGun/mailGun.service');
 
   const prisma = createPrismaMock();
   const mail = { sendMail: jest.fn().mockResolvedValue({}) };

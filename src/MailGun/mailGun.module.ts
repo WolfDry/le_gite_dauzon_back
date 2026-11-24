@@ -5,5 +5,6 @@ import { MailGunController } from './mailGun.controller'
 @Module({
   controllers: [MailGunController],
   providers: [MailGunsService],
+  exports: [MailGunsService],
 })
 export class MailGunModule { }

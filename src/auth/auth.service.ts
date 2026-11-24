@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { verifyPassword } from './password';
@@ -8,7 +8,6 @@ type JwtPayload = { sub: number; email: string };
 @Injectable()
 export class AuthService {
   constructor(
-    @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     private readonly jwt: JwtService,
   ) { }
