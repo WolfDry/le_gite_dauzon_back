@@ -7,6 +7,7 @@ import { SupplementLineDto } from './dto/supplement-line.dto';
 import { ListReservationsQueryDto } from './dto/list-reservations-query.dto';
 import { ReglagesService } from 'src/tarification/reglages.service';
 import { totalReservation } from 'src/tarification/calcul';
+import { BlocagesService } from 'src/blocages/blocages.service';
 
 export type PricedSupplementLine = { supplementId: number; nb: number; tarif: number };
 
@@ -64,6 +65,7 @@ export class ReservationsService {
   constructor(
     private prisma: PrismaService,
     private reglagesService: ReglagesService,
+    private blocagesService: BlocagesService,
   ) { }
 
   /** La taxe de séjour est celle des réglages au moment de l'enregistrement. */
@@ -147,12 +149,20 @@ export class ReservationsService {
     }));
   }
 
-  findDisponibilites(depuis: Date) {
-    return this.prisma.reservation.findMany({
-      where: { statut: { in: STATUTS_BLOQUANTS }, fin: { gte: depuis } },
-      select: { debut: true, fin: true },
-      orderBy: { debut: 'asc' },
-    });
+  /**
+   * Périodes indisponibles pour le site : options, séjours confirmés et dates bloquées (B-F8),
+   * triées par début. Dates seules : le site ne distingue pas un blocage d'un séjour.
+   */
+  async findDisponibilites(depuis: Date) {
+    const [reservations, blocages] = await Promise.all([
+      this.prisma.reservation.findMany({
+        where: { statut: { in: STATUTS_BLOQUANTS }, fin: { gte: depuis } },
+        select: { debut: true, fin: true },
+        orderBy: { debut: 'asc' },
+      }),
+      this.blocagesService.findDates(depuis),
+    ]);
+    return [...reservations, ...blocages].sort((a, b) => a.debut.getTime() - b.debut.getTime());
   }
 
   /**

@@ -10,6 +10,7 @@ import { EvenementsModule } from './evenements/evenements.module'
 import { SupplementsModule } from './supplements/supplements.module'
 import { CommentairesModule } from './commentaires/commentaires.module'
 import { ReservationsModule } from './reservations/reservations.module'
+import { BlocagesModule } from './blocages/blocages.module'
 import { CronModule } from './cron/cron.module'
 import { TarificationModule } from './tarification/tarification.module'
 import { AuthModule } from './auth/auth.module'
@@ -29,6 +30,7 @@ import { PrismaExceptionFilter } from './common/prisma-exception.filter'
     AuthModule,
     ClientsModule,
     ReservationsModule,
+    BlocagesModule,
     SupplementsModule,
     CommentairesModule,
     TarifsModule,

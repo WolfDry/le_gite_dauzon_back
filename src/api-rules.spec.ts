@@ -52,6 +52,24 @@ describe("Règles de l'API", () => {
         orderBy: { debut: 'asc' },
       });
     });
+
+    it('ajoute les dates bloquées, sans leur motif, triées avec les séjours', async () => {
+      t.prisma.reservation.findMany.mockResolvedValueOnce([
+        { debut: new Date('2026-07-04'), fin: new Date('2026-07-11') },
+        { debut: new Date('2026-08-01'), fin: new Date('2026-08-08') },
+      ]);
+      t.prisma.blocage.findMany.mockResolvedValueOnce([{ debut: new Date('2026-07-15'), fin: new Date('2026-07-20') }]);
+
+      const res = await t.http().get('/reservations/disponibilites').expect(200);
+
+      expect(res.body.map((d: { debut: string }) => d.debut.slice(0, 10))).toEqual(['2026-07-04', '2026-07-15', '2026-08-01']);
+      const startOfYear = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
+      expect(t.prisma.blocage.findMany).toHaveBeenCalledWith({
+        where: { fin: { gte: startOfYear } },
+        select: { debut: true, fin: true },
+        orderBy: { debut: 'asc' },
+      });
+    });
   });
 
   describe('demande de réservation du site', () => {

@@ -57,6 +57,7 @@ const createPrismaMock = () => ({
   tarifPeriode: model(),
   reglages: model(),
   evenement: model(),
+  blocage: model(),
 });
 
 export type PrismaMock = ReturnType<typeof createPrismaMock>;

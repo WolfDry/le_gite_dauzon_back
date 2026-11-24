@@ -84,7 +84,7 @@ export class ReservationsController {
 
   @Public()
   @Get('disponibilites')
-  @ApiOperation({ summary: "Booked stays (OPTION or CONFIRMEE) from January 1st of the current year (dates only, public)" })
+  @ApiOperation({ summary: "Unavailable periods (OPTION or CONFIRMEE stays and blocked dates) from January 1st of the current year (dates only, public)" })
   findDisponibilites() {
     const startOfYear = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
     return this.reservationsService.findDisponibilites(startOfYear)

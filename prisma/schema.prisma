@@ -148,6 +148,18 @@ model TarifPeriode {
   @@index([debut, fin])
 }
 
+/// Dates bloquées hors réservation (usage personnel, travaux) : les nuits du `debut` (inclus) au `fin`
+/// (jour de départ, exclu), comme un séjour. Affichées comme réservées sur le site, sans le motif.
+model Blocage {
+  id    Int      @id @default(autoincrement())
+  debut DateTime @db.Date
+  fin   DateTime @db.Date
+  /// Motif interne (« Travaux de toiture »), jamais montré sur le site.
+  motif String?
+
+  @@index([debut, fin])
+}
+
 /// Réglages du gîte : une seule ligne (id 1).
 model Reglages {
   id                 Int   @id @default(1)
