@@ -233,6 +233,68 @@ describe("Règles de l'API", () => {
     });
   });
 
+  describe('liste des réservations (admin)', () => {
+    const lastFindManyArgs = () => t.prisma.reservation.findMany.mock.calls[0][0];
+
+    it('filtre par période, bornes incluses, et trie par arrivée', async () => {
+      await t.http().get('/reservations?depuis=2026-01-01&jusqua=2026-12-31').set(t.auth).expect(200);
+      expect(lastFindManyArgs().where).toEqual({
+        fin: { gte: new Date('2026-01-01') },
+        debut: { lte: new Date('2026-12-31') },
+      });
+      expect(lastFindManyArgs().orderBy).toEqual([{ debut: 'asc' }, { id: 'asc' }]);
+    });
+
+    it('renvoie la vue liste par défaut, sans le message ni le téléphone du client', async () => {
+      await t.http().get('/reservations').set(t.auth).expect(200);
+      const { where, select } = lastFindManyArgs();
+      expect(where).toEqual({});
+      expect(select.supplements).toBeDefined();
+      expect(select.message).toBeUndefined();
+      expect(select.client).toEqual({ select: { id: true, nom: true, prenom: true, email: true } });
+    });
+
+    it("la vue aperçu ne renvoie que l'id, les dates, le statut et le nom", async () => {
+      await t.http().get('/reservations?vue=apercu&statut=DEMANDE').set(t.auth).expect(200);
+      const { where, select } = lastFindManyArgs();
+      expect(where).toEqual({ statut: { in: ['DEMANDE'] } });
+      expect(Object.keys(select).sort()).toEqual(['client', 'clientId', 'debut', 'demandeurNom', 'fin', 'id', 'statut']);
+    });
+
+    it('accepte plusieurs statuts, séparés par des virgules ou répétés', async () => {
+      await t.http().get('/reservations?statut=OPTION,CONFIRMEE').set(t.auth).expect(200);
+      await t.http().get('/reservations?statut=OPTION&statut=CONFIRMEE').set(t.auth).expect(200);
+      for (const [args] of t.prisma.reservation.findMany.mock.calls) {
+        expect(args.where).toEqual({ statut: { in: ['OPTION', 'CONFIRMEE'] } });
+      }
+    });
+
+    it.each([
+      ['une date invalide', 'depuis=demain'],
+      ['un statut inconnu', 'statut=PAYEE'],
+      ['une vue inconnue', 'vue=complete'],
+    ])('refuse %s', async (_, query) => {
+      await t.http().get(`/reservations?${query}`).set(t.auth).expect(400);
+      expect(t.prisma.reservation.findMany).not.toHaveBeenCalled();
+    });
+
+    it('est réservée aux administrateurs', async () => {
+      await t.http().get('/reservations').expect(401);
+    });
+  });
+
+  describe('liste des clients (admin)', () => {
+    it('ajoute le nombre de réservations de chaque client', async () => {
+      t.prisma.client.findMany.mockResolvedValueOnce([
+        { id: 1, nom: 'Dupont', prenom: 'Marie', email: 'a@b.fr', telephone: '06', _count: { reservations: 3 } },
+      ]);
+      const res = await t.http().get('/clients').set(t.auth).expect(200);
+      expect(res.body).toEqual([
+        { id: 1, nom: 'Dupont', prenom: 'Marie', email: 'a@b.fr', telephone: '06', nbReservations: 3 },
+      ]);
+    });
+  });
+
   describe('purge automatique des demandes', () => {
     const SECRET = 'cron-secret-de-test';
 

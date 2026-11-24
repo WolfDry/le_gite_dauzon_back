@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Logger } from '@nestjs/common'
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Logger, Query } from '@nestjs/common'
+import { ListReservationsQueryDto } from './dto/list-reservations-query.dto'
 import { Prisma, ReservationSource, ReservationStatut } from '@prisma/client'
 import { CreateReservationDto } from './dto/create-reservation.dto'
 import { ReservationsService } from './reservations.service'
@@ -90,9 +91,9 @@ export class ReservationsController {
   }
 
   @Get()
-  @ApiOperation({ summary: "Get all reservations" })
-  findAll() {
-    return this.reservationsService.findAll()
+  @ApiOperation({ summary: "Reservations overlapping a period (bounds included), optionally filtered by status" })
+  findAll(@Query() query: ListReservationsQueryDto) {
+    return this.reservationsService.findAll(query)
   }
 
   @Get(':id')

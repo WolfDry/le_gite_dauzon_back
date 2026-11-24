@@ -4,6 +4,7 @@ import { Prisma, ReservationSource, ReservationStatut } from '@prisma/client';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { CreateRequestReservationDto } from './dto/create-request-reservation.dto';
 import { SupplementLineDto } from './dto/supplement-line.dto';
+import { ListReservationsQueryDto } from './dto/list-reservations-query.dto';
 
 export type PricedSupplementLine = { supplementId: number; nb: number; tarif: number };
 
@@ -18,6 +19,42 @@ export const STATUTS_BLOQUANTS: ReservationStatut[] = [ReservationStatut.OPTION,
 export const PURGE_DELAI_JOURS = 90;
 
 const DAY_MS = 86_400_000;
+
+/** Liste de l'admin : tableau, calendrier, totaux. Sans message, ni téléphone du client, ni dates de suivi. */
+export const SELECT_LISTE = {
+  id: true,
+  tarif: true,
+  debut: true,
+  fin: true,
+  adultes: true,
+  enfants: true,
+  statut: true,
+  source: true,
+  demandeurNom: true,
+  demandeurEmail: true,
+  demandeurTelephone: true,
+  clientId: true,
+  client: { select: { id: true, nom: true, prenom: true, email: true } },
+  supplements: {
+    select: {
+      supplementId: true,
+      nb: true,
+      tarif: true,
+      supplement: { select: { id: true, label: true, type: true } },
+    },
+  },
+} satisfies Prisma.ReservationSelect;
+
+/** Aperçu : de quoi placer un séjour sur un calendrier, le nommer ou le compter. */
+export const SELECT_APERCU = {
+  id: true,
+  debut: true,
+  fin: true,
+  statut: true,
+  demandeurNom: true,
+  clientId: true,
+  client: { select: { id: true, nom: true, prenom: true } },
+} satisfies Prisma.ReservationSelect;
 
 @Injectable()
 export class ReservationsService {
@@ -107,16 +144,20 @@ export class ReservationsService {
     });
   }
 
-  findAll() {
+  /**
+   * Réservations qui touchent la période [depuis, jusqua], bornes incluses (le jour de départ compte),
+   * triées par date d'arrivée. Sans filtre : tout l'historique.
+   */
+  findAll({ depuis, jusqua, statut, vue = 'liste' }: ListReservationsQueryDto = {}) {
+    const where: Prisma.ReservationWhereInput = {};
+    if (depuis) where.fin = { gte: depuis };
+    if (jusqua) where.debut = { lte: jusqua };
+    if (statut?.length) where.statut = { in: statut };
+
     return this.prisma.reservation.findMany({
-      include: {
-        client: true,
-        supplements: {
-          include: {
-            supplement: true
-          }
-        }
-      }
+      where,
+      select: vue === 'apercu' ? SELECT_APERCU : SELECT_LISTE,
+      orderBy: [{ debut: 'asc' }, { id: 'asc' }],
     });
   }
 

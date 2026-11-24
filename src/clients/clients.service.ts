@@ -10,8 +10,11 @@ export class ClientsService {
     return this.prisma.client.create({ data });
   }
 
-  findAll() {
-    return this.prisma.client.findMany();
+  async findAll() {
+    const clients = await this.prisma.client.findMany({
+      include: { _count: { select: { reservations: true } } },
+    });
+    return clients.map(({ _count, ...client }) => ({ ...client, nbReservations: _count.reservations }));
   }
 
   findOne(id: number) {
