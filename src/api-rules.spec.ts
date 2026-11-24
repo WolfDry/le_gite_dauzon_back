@@ -140,10 +140,9 @@ describe("Règles de l'API", () => {
       await t.http().post('/reservations/request').send(REQUEST).expect(201);
       // Bornes strictes : les séjours peuvent se suivre (départ le jour d'une arrivée).
       const nuits = { debut: { lt: new Date('2026-07-11') }, fin: { gt: new Date('2026-07-04') } };
-      expect(t.prisma.reservation.findFirst).toHaveBeenCalledWith({
-        where: { statut: { in: ['OPTION', 'CONFIRMEE'] }, ...nuits },
-        select: { id: true },
-      });
+      expect(t.prisma.reservation.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { statut: { in: ['OPTION', 'CONFIRMEE'] }, ...nuits } }),
+      );
       expect(t.prisma.blocage.findFirst).toHaveBeenCalledWith({ where: nuits, select: { debut: true, fin: true } });
     });
 
@@ -271,6 +270,77 @@ describe("Règles de l'API", () => {
 
     it('refuse un statut inconnu', async () => {
       await t.http().patch('/reservations/1').set(t.auth).send({ statut: 'PAYEE' }).expect(400);
+    });
+  });
+
+  describe('chevauchement des séjours (B-F12)', () => {
+    const CONFLIT = {
+      debut: new Date('2026-08-05'),
+      fin: new Date('2026-08-12'),
+      demandeurNom: null,
+      client: { prenom: 'Jean', nom: 'Martin' },
+    };
+    const ENREGISTREE = {
+      statut: 'CONFIRMEE',
+      clientId: 1,
+      tarif: 500,
+      debut: new Date('2026-08-01'),
+      fin: new Date('2026-08-08'),
+    };
+    const CREATION = { tarif: 500, debut: '2026-08-01', fin: '2026-08-08', clientId: 1 };
+
+    it('refuse (409) une réservation confirmée qui chevauche une option ou un séjour confirmé', async () => {
+      t.prisma.reservation.findFirst.mockResolvedValueOnce(CONFLIT);
+      const res = await t.http().post('/reservations').set(t.auth).send(CREATION).expect(409);
+      expect(res.body.message).toBe(
+        "Ces dates chevauchent la réservation de Jean Martin (du 05/08/2026 au 12/08/2026). Annulez ou déplacez-la d'abord, ou gardez celle-ci en demande.",
+      );
+      expect(t.prisma.reservation.create).not.toHaveBeenCalled();
+      // Bornes strictes : les séjours peuvent se suivre.
+      expect(t.prisma.reservation.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { statut: { in: ['OPTION', 'CONFIRMEE'] }, debut: { lt: new Date('2026-08-08') }, fin: { gt: new Date('2026-08-01') } },
+        }),
+      );
+    });
+
+    it('ne contrôle pas une demande, ni les dates bloquées', async () => {
+      await t.http().post('/reservations').set(t.auth).send({ ...CREATION, statut: 'DEMANDE' }).expect(201);
+      expect(t.prisma.reservation.findFirst).not.toHaveBeenCalled();
+      await t.http().post('/reservations').set(t.auth).send(CREATION).expect(201);
+      expect(t.prisma.blocage.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('refuse de confirmer une demande sur des dates déjà prises', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce({ ...ENREGISTREE, statut: 'DEMANDE' });
+      t.prisma.reservation.findFirst.mockResolvedValueOnce({ ...CONFLIT, client: null, demandeurNom: 'Léa' });
+      const res = await t.http().patch('/reservations/7').set(t.auth).send({ statut: 'OPTION' }).expect(409);
+      expect(res.body.message).toContain('la réservation de Léa');
+      expect(t.prisma.reservation.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: { not: 7 } }) }),
+      );
+      expect(t.prisma.reservation.update).not.toHaveBeenCalled();
+    });
+
+    it('contrôle un séjour confirmé dont une date change, avec la date enregistrée', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(ENREGISTREE);
+      await t.http().patch('/reservations/7').set(t.auth).send({ fin: '2026-08-10' }).expect(200);
+      expect(t.prisma.reservation.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ debut: { lt: new Date('2026-08-10') }, fin: { gt: new Date('2026-08-01') } }),
+        }),
+      );
+    });
+
+    it('laisse modifier un séjour confirmé sans toucher à ses dates', async () => {
+      t.prisma.reservation.findUniqueOrThrow.mockResolvedValueOnce(ENREGISTREE);
+      await t
+        .http()
+        .patch('/reservations/7')
+        .set(t.auth)
+        .send({ debut: '2026-08-01', fin: '2026-08-08', adultes: 3 })
+        .expect(200);
+      expect(t.prisma.reservation.findFirst).not.toHaveBeenCalled();
     });
   });
 

@@ -23,6 +23,9 @@ export const PURGE_DELAI_JOURS = 90;
 
 const DAY_MS = 86_400_000;
 
+/** "2026-07-04T00:00:00.000Z" -> "04/07/2026". */
+const jour = (date: Date) => date.toISOString().slice(0, 10).split('-').reverse().join('/');
+
 /** Liste de l'admin : tableau, calendrier, totaux. Sans message, ni téléphone du client, ni dates de suivi. */
 export const SELECT_LISTE = {
   id: true,
@@ -70,6 +73,9 @@ export class ReservationsService {
 
   /** La taxe de séjour est celle des réglages au moment de l'enregistrement. */
   async create(data: Omit<Prisma.ReservationCreateInput, 'supplements' | 'taxeSejour'>, supplements: PricedSupplementLine[] = []) {
+    if (data.statut && STATUTS_BLOQUANTS.includes(data.statut)) {
+      await this.verifierChevauchement(new Date(data.debut), new Date(data.fin));
+    }
     const { taxeSejour } = await this.reglagesService.get();
     return this.prisma.reservation.create({
       data: {
@@ -121,14 +127,42 @@ export class ReservationsService {
    */
   private async verifierDisponibilite(debut: Date, fin: Date) {
     const [reservation, blocage] = await Promise.all([
-      this.prisma.reservation.findFirst({
-        where: { statut: { in: STATUTS_BLOQUANTS }, debut: { lt: fin }, fin: { gt: debut } },
-        select: { id: true },
-      }),
+      this.findChevauchement(debut, fin),
       this.blocagesService.findChevauchement(debut, fin),
     ]);
     if (reservation || blocage) {
       throw new ConflictException('Ces dates ne sont plus disponibles');
+    }
+  }
+
+  /**
+   * Première option ou réservation confirmée qui partage au moins une nuit avec [debut, fin), ou `null`.
+   * Les séjours peuvent se suivre : départ le jour d'une arrivée, et inversement.
+   */
+  private findChevauchement(debut: Date, fin: Date, exceptId?: number) {
+    return this.prisma.reservation.findFirst({
+      where: {
+        statut: { in: STATUTS_BLOQUANTS },
+        debut: { lt: fin },
+        fin: { gt: debut },
+        ...(exceptId !== undefined && { id: { not: exceptId } }),
+      },
+      select: { debut: true, fin: true, demandeurNom: true, client: { select: { nom: true, prenom: true } } },
+      orderBy: { debut: 'asc' },
+    });
+  }
+
+  /**
+   * deux options ou réservations confirmées ne se chevauchent pas (409). Les dates bloquées
+   * ne sont pas contrôlées ici : l'admin peut louer pendant ses propres dates bloquées, il est seulement averti.
+   */
+  private async verifierChevauchement(debut: Date, fin: Date, exceptId?: number) {
+    const conflit = await this.findChevauchement(debut, fin, exceptId);
+    if (conflit) {
+      const nom = conflit.client ? `${conflit.client.prenom} ${conflit.client.nom}`.trim() : conflit.demandeurNom;
+      throw new ConflictException(
+        `Ces dates chevauchent ${nom ? `la réservation de ${nom}` : 'une autre réservation'} (du ${jour(conflit.debut)} au ${jour(conflit.fin)}). Annulez ou déplacez-la d'abord, ou gardez celle-ci en demande.`,
+      );
     }
   }
 
@@ -241,6 +275,13 @@ export class ReservationsService {
     const detach = connectId === undefined && !createClient && (dto.clientId === null || dto.disconnectClient === true);
 
     const statut = dto.statut ?? current.statut;
+    // Contrôlé quand les dates changent ou quand le séjour devient bloquant : modifier autre chose
+    // (suppléments, client…) reste possible sur un séjour déjà enregistré avant ce contrôle.
+    const change = (nouvelle: Date | undefined, ancienne: Date) => !!nouvelle && nouvelle.getTime() !== ancienne?.getTime();
+    const datesChangent = change(dto.debut, current.debut) || change(dto.fin, current.fin);
+    if (STATUTS_BLOQUANTS.includes(statut) && (datesChangent || !STATUTS_BLOQUANTS.includes(current.statut))) {
+      await this.verifierChevauchement(dto.debut ?? current.debut, dto.fin ?? current.fin, id);
+    }
     if (STATUTS_BLOQUANTS.includes(statut)) {
       const hasClient = connectId !== undefined || !!createClient || (current.clientId !== null && !detach);
       const hasTarif = dto.tarif !== undefined ? dto.tarif !== null : current.tarif !== null;
