@@ -163,6 +163,7 @@ describe("Règles de l'API", () => {
       ['une date invalide', { debut: 'pas une date' }],
       ['un e-mail invalide', { email: 'pas-un-email' }],
       ['un téléphone vide', { phone: '' }],
+      ['un téléphone avec moins de 6 chiffres', { phone: '06 12' }],
       ['un nom absent', { nom: undefined }],
       ['un nom fait d’espaces', { nom: '   ' }],
       ['un message trop long', { message: 'x'.repeat(2001) }],
@@ -757,6 +758,19 @@ describe("Règles de l'API", () => {
         .set(t.auth)
         .send({ nom: 'Dupont', prenom: 'Marie', email: 'marie@example.com', telephone: '+32 470 12 34 56' })
         .expect(200);
+    });
+
+    it.each(['06 12 34 56 78', '06.12.34.56.78', '+33 (0)6 12 34 56 78', '+31 6 12345678', '0032 470/12.34.56', '+1 (555) 123-4567'])(
+      'accepte le téléphone %s, quel que soit son format',
+      async (telephone) => {
+        await t.http().post('/clients').set(t.auth).send({ nom: 'Dupont', prenom: 'Marie', email: 'marie@example.com', telephone }).expect(201);
+        await t.http().patch('/clients/1').set(t.auth).send({ telephone }).expect(200);
+      },
+    );
+
+    it.each(['', '   ', '06 12', 'pas de numéro', '0'.repeat(31)])('refuse le téléphone « %s » (400)', async (telephone) => {
+      await t.http().post('/clients').set(t.auth).send({ nom: 'Dupont', prenom: 'Marie', email: 'marie@example.com', telephone }).expect(400);
+      await t.http().patch('/clients/1').set(t.auth).send({ telephone }).expect(400);
     });
   });
 

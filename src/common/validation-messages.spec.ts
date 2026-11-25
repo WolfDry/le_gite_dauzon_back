@@ -36,6 +36,15 @@ describe('messages de validation', () => {
     )
   })
 
+  it('explique la règle du téléphone', async () => {
+    expect(await messagesFor(CreateClientDto, { nom: 'Martin', prenom: 'Léa', email: 'lea@example.com', telephone: '06 12' })).toEqual([
+      '« Téléphone » doit contenir au moins 6 chiffres',
+    ])
+    expect(await messagesFor(CreateClientDto, { nom: 'Martin', prenom: 'Léa', email: 'lea@example.com', telephone: '' })).toEqual([
+      '« Téléphone » est obligatoire',
+    ])
+  })
+
   it('traduit les bornes et les montants', async () => {
     const messages = await messagesFor(CreateReservationDto, { ...reservation, tarif: -1, adultes: 1.5, enfants: 99 })
     expect(messages).toEqual(

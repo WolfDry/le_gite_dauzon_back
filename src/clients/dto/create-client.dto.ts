@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEmail, IsNotEmpty, IsString, MaxLength } from "class-validator";
+import { IsTelephone } from "src/common/validation";
 
 export class CreateClientDto {
 
@@ -27,9 +28,7 @@ export class CreateClientDto {
   @MaxLength(100)
   readonly prenom: string;
 
-  @ApiProperty({ description: 'Client phone number' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(30)
+  @ApiProperty({ description: 'Client phone number (tout format, au moins 6 chiffres)' })
+  @IsTelephone()
   readonly telephone: string;
 }

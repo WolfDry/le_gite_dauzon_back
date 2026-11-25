@@ -122,6 +122,8 @@ const TRANSLATIONS: [RegExp, (...groups: string[]) => string][] = [
   [/^must be either object or array$/, () => 'doit être un objet ou une liste'],
   // Message du décorateur IsAfter : « fin doit être postérieure à debut ».
   [/^doit être postérieure à (\w+)$/, (other) => `doit être postérieure à « ${fieldLabel(other)} »`],
+  // Message du décorateur IsTelephone : « telephone doit contenir au moins 6 chiffres ».
+  [/^doit contenir au moins (\d+) chiffres$/, (n) => `doit contenir au moins ${n} chiffres`],
 ]
 
 /**

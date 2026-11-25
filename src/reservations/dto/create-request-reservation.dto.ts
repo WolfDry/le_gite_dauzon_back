@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { Transform, Type } from 'class-transformer'
 import { IsDate, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
-import { IsAfter, IsNbVoyageurs } from 'src/common/validation'
+import { IsAfter, IsNbVoyageurs, IsTelephone } from 'src/common/validation'
 import { AntiBotDto } from 'src/common/anti-bot'
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value)
@@ -45,11 +45,9 @@ export class CreateRequestReservationDto extends AntiBotDto {
   @MaxLength(254)
   readonly email: string
 
-  @ApiProperty({ description: 'Téléphone du demandeur' })
+  @ApiProperty({ description: 'Téléphone du demandeur (tout format, au moins 6 chiffres)' })
   @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(30)
+  @IsTelephone()
   readonly phone: string
 
   @ApiProperty({ description: 'Message libre du demandeur', required: false })

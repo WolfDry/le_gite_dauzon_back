@@ -14,7 +14,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator'
-import { IsAfter, IsMontant, IsNbVoyageurs } from 'src/common/validation'
+import { IsAfter, IsMontant, IsNbVoyageurs, IsTelephone } from 'src/common/validation'
 import { SupplementLineDto } from './supplement-line.dto'
 
 const isNewClient = (dto: CreateReservationDto) => dto.clientId === null || dto.clientId === undefined
@@ -94,9 +94,7 @@ export class CreateReservationDto {
 
   @ApiProperty({ description: 'Téléphone du client (si pas de clientId)', required: false })
   @ValidateIf(isNewClient)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(30)
+  @IsTelephone()
   readonly telephone?: string
 
   @ApiProperty({ description: 'Statut (CONFIRMEE par défaut pour une réservation saisie dans l’admin)', enum: ReservationStatut, required: false })

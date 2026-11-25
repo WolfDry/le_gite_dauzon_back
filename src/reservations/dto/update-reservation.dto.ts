@@ -14,7 +14,7 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator'
-import { IsAfter, IsMontant, IsNbVoyageurs } from 'src/common/validation'
+import { IsAfter, IsMontant, IsNbVoyageurs, IsTelephone } from 'src/common/validation'
 import { SupplementLineDto } from './supplement-line.dto'
 
 export class UpdateReservationClientDto {
@@ -40,9 +40,7 @@ export class UpdateReservationClientDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(30)
+  @IsTelephone()
   readonly telephone?: string
 }
 
@@ -73,9 +71,7 @@ export class NewReservationClientDto {
   readonly prenom: string
 
   @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(30)
+  @IsTelephone()
   readonly telephone: string
 }
 

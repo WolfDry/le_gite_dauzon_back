@@ -1,5 +1,16 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common'
-import { IsInt, IsNumber, Max, Min, ValidationArguments, ValidationOptions, registerDecorator } from 'class-validator'
+import {
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  ValidationArguments,
+  ValidationOptions,
+  registerDecorator,
+} from 'class-validator'
 import { validationMessages } from './validation-messages'
 
 export const createValidationPipe = () =>
@@ -34,6 +45,35 @@ export function IsMontant(options?: ValidationOptions) {
   return (object: object, propertyName: string) => {
     IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 2 }, options)(object, propertyName)
     Min(0, options)(object, propertyName)
+  }
+}
+
+/**
+ * Numéro de téléphone, dans n'importe quel format (français, étranger, espaces, points,
+ * tirets, parenthèses, indicatif...). Seule règle, la même que l'admin et le site public :
+ * au moins 6 chiffres et 30 caractères au plus.
+ */
+export const TELEPHONE_MIN_CHIFFRES = 6
+export const TELEPHONE_MAX_LENGTH = 30
+
+export function IsTelephone(options?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    IsString(options)(object, propertyName)
+    IsNotEmpty(options)(object, propertyName)
+    MaxLength(TELEPHONE_MAX_LENGTH, options)(object, propertyName)
+    registerDecorator({
+      name: 'isTelephone',
+      target: object.constructor,
+      propertyName,
+      options: { message: `${propertyName} doit contenir au moins ${TELEPHONE_MIN_CHIFFRES} chiffres`, ...options },
+      validator: {
+        validate(value: unknown) {
+          // Valeur absente ou d'un autre type : déjà signalée par IsNotEmpty / IsString.
+          if (typeof value !== 'string' || value === '') return true
+          return value.replace(/\D/g, '').length >= TELEPHONE_MIN_CHIFFRES
+        },
+      },
+    })
   }
 }
 
