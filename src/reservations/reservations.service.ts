@@ -8,6 +8,7 @@ import { ListReservationsQueryDto } from './dto/list-reservations-query.dto';
 import { ReglagesService } from 'src/tarification/reglages.service';
 import { totalReservation } from 'src/tarification/calcul';
 import { BlocagesService } from 'src/blocages/blocages.service';
+import { afterMessage } from 'src/common/validation-messages';
 
 export type PricedSupplementLine = { supplementId: number; nb: number; tarif: number };
 
@@ -266,7 +267,7 @@ export class ReservationsService {
       const debut = dto.debut ?? current.debut;
       const fin = dto.fin ?? current.fin;
       if (debut instanceof Date && fin instanceof Date && fin.getTime() <= debut.getTime()) {
-        throw new BadRequestException(['fin doit être postérieure à debut']);
+        throw new BadRequestException([afterMessage('fin', 'debut')]);
       }
     }
 

@@ -9,6 +9,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthUser, CurrentUser, Public } from 'src/auth/public.decorator';
 import { ThrottlePublicWrite } from 'src/common/throttle';
 import { ProtectFromBots } from 'src/common/anti-bot';
+import { fieldMessage } from 'src/common/validation-messages';
 
 @ApiTags('commentaires')
 @ApiBearerAuth()
@@ -28,7 +29,7 @@ export class CommentairesController {
     const { commentaire, name, note, verif, created } = createCommentaireDto;
 
     if (!currentUser && note < 1) {
-      throw new BadRequestException(['note must not be less than 1']);
+      throw new BadRequestException([fieldMessage('note', 'doit valoir au moins 1')]);
     }
 
     const payload: Prisma.CommentaireCreateInput = { commentaire, name, note }

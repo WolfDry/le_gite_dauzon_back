@@ -3,10 +3,11 @@ import { EventType } from "@prisma/client"
 import { Type } from "class-transformer"
 import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from "class-validator"
 import { EVENEMENTS_FOLDER } from "src/Upload/Upload.service"
+import { fieldMessage } from "src/common/validation-messages"
 
 /** L'image doit être un public_id Cloudinary du dossier des événements. */
 export const IMAGE_ID_PATTERN = new RegExp(`^${EVENEMENTS_FOLDER}/`)
-export const IMAGE_ID_MESSAGE = `image must be a Cloudinary public_id in the '${EVENEMENTS_FOLDER}' folder`
+export const IMAGE_ID_MESSAGE = fieldMessage('image', `doit être une image envoyée dans le dossier « ${EVENEMENTS_FOLDER} »`)
 
 export class CreateEvenementDto {
 

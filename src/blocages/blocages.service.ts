@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { afterMessage } from 'src/common/validation-messages';
 import { CreateBlocageDto } from './dto/create-blocage.dto';
 import { UpdateBlocageDto } from './dto/update-blocage.dto';
 import { ListBlocagesQueryDto } from './dto/list-blocages-query.dto';
@@ -43,7 +44,7 @@ export class BlocagesService {
     const fin = dto.fin ?? current.fin;
     // Le DTO ne compare debut et fin que s'ils sont envoyés ensemble : on complète avec les dates enregistrées.
     if (fin.getTime() <= debut.getTime()) {
-      throw new BadRequestException(['fin doit être postérieure à debut']);
+      throw new BadRequestException([afterMessage('fin', 'debut')]);
     }
     if (dto.debut || dto.fin) await this.verifierChevauchement(debut, fin, id);
 

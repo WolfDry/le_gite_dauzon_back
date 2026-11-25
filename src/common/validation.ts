@@ -1,10 +1,13 @@
-import { ValidationPipe } from '@nestjs/common'
+import { BadRequestException, ValidationPipe } from '@nestjs/common'
 import { IsInt, IsNumber, Max, Min, ValidationArguments, ValidationOptions, registerDecorator } from 'class-validator'
+import { validationMessages } from './validation-messages'
 
 export const createValidationPipe = () =>
   new ValidationPipe({
     whitelist: true,
     transform: true,
+    // Messages en français, avec le libellé du champ plutôt que son nom technique.
+    exceptionFactory: (errors) => new BadRequestException(validationMessages(errors)),
   })
 
 export function IsAfter(property: string, options?: ValidationOptions) {
